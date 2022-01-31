@@ -1082,6 +1082,7 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
  * @param r The #runner thread.
  * @param c The #cell.
  * @param timer Are we timing this ?
+ * @return 1 if rescheduled successfully, 0 otherwise.
  */
 int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
@@ -1103,3 +1104,4 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
   if (timer) TIMER_TOC(timer_rt_reschedule);
   return res;
 }
+
