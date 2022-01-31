@@ -144,6 +144,7 @@ Scheduler:
   task_level_output_frequency:      0  # (Optional) Dumping frequency of the task level data. By default, writes only at the first step.
   free_foreign_during_restart:      0  # (Optional) Should the code free the foreign data when dumping restart files in order to get breathing space?
   free_foreign_during_rebuild:      0  # (Optional) Should the code free the foreign data when calling a rebuld in order to get breathing space?
+  enable_rt_subcycling:             0  # (Optional) Enable subcycling of RT tasks w.r.t. hydro tasks. WARNING: EXPERIMENTAL FEATURE, USE WITH CAUTION.
 
 # Parameters governing the time integration (Set dt_min and dt_max to the same value for a fixed time-step run.)
 TimeIntegration:

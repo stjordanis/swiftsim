@@ -35,6 +35,7 @@
 #include "feedback.h"
 #include "scheduler.h"
 #include "space_getsid.h"
+#include "rt_reschedule.h"
 #include "timers.h"
 
 /* Import the gravity loop functions. */
@@ -170,6 +171,7 @@ void *runner_main(void *data) {
   struct scheduler *sched = &e->sched;
   unsigned int seed = r->id;
   pthread_setspecific(sched->local_seed_pointer, &seed);
+  int rescheduled_rt = 0;
   /* Main loop. */
   while (1) {
 
@@ -607,7 +609,13 @@ void *runner_main(void *data) {
           runner_do_rt_ghost2(r, t->ci, 1);
           break;
         case task_type_rt_tchem:
+          message("rt_tchem wait=%d skip=%d before being called", t->wait, t->skip);
           runner_do_rt_tchem(r, t->ci, 1);
+          message("rt_tchem wait=%d skip=%d after being called", t->wait, t->skip);
+          break;
+        case task_type_rt_reschedule:
+          rescheduled_rt = runner_do_rt_reschedule(r, t->ci, 1);
+          message("Got res %d", rescheduled_rt);
           break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
@@ -632,6 +640,18 @@ void *runner_main(void *data) {
       /* We're done with this task, see if we get a next one. */
       prev = t;
       t = scheduler_done(sched, t);
+      if (prev->type == task_type_rt_tchem)
+        message("rt_tchem wait=%d skip=%d after scheduler_done called", prev->wait, prev->skip);
+
+      if (rescheduled_rt) {
+        /* can only be the case if RT was rescheduled successfully
+         * in this iteration */
+        if (prev->type != task_type_rt_reschedule)
+          error("calling reschedule_rescheduler when prev->type != task_type_reschedule");
+        
+        rt_reschedule_rescheduler(r, prev->ci, prev);
+        rescheduled_rt = 0;
+      }
 
     } /* main loop. */
   }

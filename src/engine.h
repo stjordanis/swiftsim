@@ -600,6 +600,9 @@ struct engine {
   /* Flag to tell brute force checks a snapshot was recently written. */
   int force_checks_snapshot_flag;
 #endif
+
+  /* Are we sub-cycling radiative transfer tasks w.r.t. hydro tasks? */
+  int subcycle_rt;
 };
 
 /* Function prototypes, engine.c. */

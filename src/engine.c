@@ -1122,11 +1122,11 @@ int engine_estimate_nr_tasks(const struct engine *e) {
   }
 #endif
   if (e->policy & engine_policy_rt) {
-    /* gradient: 1 self + 13 pairs                   |   14
-     * transport: 1 self + 13 pairs                  | + 14
-     * implicits: in + out, transport_out            | +  3
-     * others: ghost1, ghost2, thermochemistry       | +  3 */
-    n1 += 34;
+    /* gradient: 1 self + 13 pairs                          | + 14
+     * transport: 1 self + 13 pairs                         | + 14
+     * implicits: in + out, transport_out                   | +  3
+     * others: ghost1, ghost2, thermochemistry, reschedule  | +  4 */
+    n1 += 35;
   }
 
 #ifdef WITH_MPI
@@ -1604,7 +1604,7 @@ void engine_skip_force_and_kick(struct engine *e) {
         t->type == task_type_bh_swallow_ghost2 ||
         t->type == task_type_bh_swallow_ghost3 || t->type == task_type_bh_in ||
         t->type == task_type_bh_out || t->type == task_type_rt_ghost1 ||
-        t->type == task_type_rt_ghost2 || t->type == task_type_rt_tchem ||
+        t->type == task_type_rt_ghost2 || t->type == task_type_rt_tchem || t->type == task_type_rt_reschedule ||
         t->type == task_type_neutrino_weight || t->type == task_type_csds ||
         t->subtype == task_subtype_force ||
         t->subtype == task_subtype_limiter ||
@@ -2994,6 +2994,9 @@ void engine_init(
   e->force_checks_only_at_snapshots =
       parser_get_opt_param_int(params, "ForceChecks:only_at_snapshots", 0);
 #endif
+
+  e->subcycle_rt = parser_get_opt_param_int(
+      params, "Scheduler:enable_rt_subcycling", 0);
 
   /* Make the space link back to the engine. */
   s->e = e;

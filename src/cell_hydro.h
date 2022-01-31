@@ -109,7 +109,7 @@ struct cell_hydro {
     /*! Task for sorting the stars again after a SF event */
     struct task *stars_resort;
 
-    /*! Radiative transfer ghost in task */
+    /*! Radiative transfer implicit in task */
     struct task *rt_in;
 
     /*! Radiative transfer ghost1 task (finishes up injection) */
@@ -124,14 +124,17 @@ struct cell_hydro {
     /*! Task for self/pair transport step of radiative transfer */
     struct link *rt_transport;
 
-    /*! Radiative transfer transport out task */
+    /*! Radiative transfer implicit transport out task */
     struct task *rt_transport_out;
 
     /*! Radiative transfer thermochemistry task */
     struct task *rt_tchem;
 
-    /*! Radiative transfer ghost out task */
+    /*! Radiative transfer implicit out task */
     struct task *rt_out;
+
+    /*! Radiative transfer rescheduler task */
+    struct task *rt_reschedule;
 
     /*! Last (integer) time the cell's part were drifted forward in time. */
     integertime_t ti_old_part;
@@ -201,6 +204,11 @@ struct cell_hydro {
 
   /*! Nr of #part in this cell. */
   int count;
+
+  /* Temporary vars for RT subcycling */
+  /*! which cycle are we on? */
+  int rt_cycle;
+
 };
 
 #endif /* SWIFT_CELL_HYDRO_H */

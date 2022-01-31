@@ -1659,8 +1659,14 @@ void engine_make_hierarchical_tasks_hydro(struct engine *e, struct cell *c,
         c->hydro.rt_tchem = scheduler_addtask(s, task_type_rt_tchem,
                                               task_subtype_none, 0, 0, c, NULL);
 
+        /* re-scheduler task */
+        c->hydro.rt_reschedule = scheduler_addtask(s, task_type_rt_reschedule,
+                                              task_subtype_none, 0, 0, c, NULL);
+
         scheduler_addunlock(s, c->hydro.rt_transport_out, c->hydro.rt_tchem);
-        scheduler_addunlock(s, c->hydro.rt_tchem, c->hydro.rt_out);
+        /* TODO: the dependency order is for testing only */
+        scheduler_addunlock(s, c->hydro.rt_tchem, c->hydro.rt_reschedule);
+        scheduler_addunlock(s, c->hydro.rt_reschedule, c->hydro.rt_out);
       }
 
       /* Subgrid tasks: black hole feedback */

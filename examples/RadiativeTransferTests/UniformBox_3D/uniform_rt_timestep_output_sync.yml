@@ -42,6 +42,7 @@ Scheduler:
   max_top_level_cells:       24
   cell_split_size:           25       # Lower than default to test going deep(er) in the tree
   dependency_graph_frequency: 0
+  enable_rt_subcycling:       1
 
 GEARRT:
   f_reduce_c: 1e-3                                   # reduce the speed of light for the RT solver by multiplying c with this factor
