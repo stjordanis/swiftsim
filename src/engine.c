@@ -2959,6 +2959,9 @@ void engine_init(
       parser_get_opt_param_int(params, "ForceChecks:only_at_snapshots", 0);
 #endif
 
+  e->subcycle_rt = parser_get_opt_param_int(
+      params, "Scheduler:enable_rt_subcycling", 0);
+
   /* Make the space link back to the engine. */
   s->e = e;
 

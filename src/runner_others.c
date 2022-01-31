@@ -52,6 +52,7 @@
 #include "hydro.h"
 #include "pressure_floor.h"
 #include "rt.h"
+#include "rt_reschedule.h"
 #include "space.h"
 #include "star_formation.h"
 #include "star_formation_logger.h"
@@ -1087,22 +1088,21 @@ void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
   const struct engine *e = r->e;
   const int count = c->hydro.count;
-  /* const int with_cosmology = (e->policy & engine_policy_cosmology); */
-  /* struct rt_props *rt_props = e->rt_props; */
-  /* const struct hydro_props *hydro_props = e->hydro_properties; */
-  /* const struct cosmology *cosmo = e->cosmology; */
-  /* const struct phys_const *phys_const = e->physical_constants; */
-  /* const struct unit_system *us = e->internal_units; */
 
   /* Anything to do here? */
+  if (!e->subcycle_rt) return;
   if (count == 0) return;
   if (!cell_is_active_hydro(c, e)) return;
 
   TIMER_TIC;
 
-  message("Ran reschedule on cell %lld", c->cellID);
+  /* Recurse? */
+  if (c->split) {
+    for (int k = 0; k < 8; k++)
+      if (c->progeny[k] != NULL) runner_do_rt_reschedule(r, c->progeny[k], 0);
+  } else {
+    rt_reschedule(r, c);
+  }
 
-  if (timer) TIMER_TOC(timer_end_rt_tchem);
+  if (timer) TIMER_TOC(timer_end_rt_reschedule);
 }
-
-
