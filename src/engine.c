@@ -1118,12 +1118,12 @@ int engine_estimate_nr_tasks(const struct engine *e) {
   }
 #endif
   if (e->policy & engine_policy_rt) {
-    /* inject: 1 self + (3^3-1)/2 = 26/2 = 13 pairs  |   14
-     * gradient: 1 self + 13 pairs                   | + 14
-     * transport: 1 self + 13 pairs                  | + 14
-     * implicits: in + out, transport_out            | +  3
-     * others: ghost1, ghost2, thermochemistry       | +  3 */
-    n1 += 48;
+    /* inject: 1 self + (3^3-1)/2 = 26/2 = 13 pairs         |   14
+     * gradient: 1 self + 13 pairs                          | + 14
+     * transport: 1 self + 13 pairs                         | + 14
+     * implicits: in + out, transport_out                   | +  3
+     * others: ghost1, ghost2, thermochemistry, reschedule  | +  4 */
+    n1 += 49;
   }
 
 #ifdef WITH_MPI

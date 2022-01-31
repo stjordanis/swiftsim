@@ -1462,6 +1462,11 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
       if (cell_is_active_hydro(t->ci, e)) scheduler_activate(s, t);
     }
 
+    /* Radiative transfer re-scheduler task */
+    else if (t->type == task_type_rt_reschedule){
+      if (cell_is_active_hydro(t->ci, e)) scheduler_activate(s, t);
+    }
+
     /* Subgrid tasks: sink formation */
     else if (t_type == task_type_sink_formation) {
       if (with_star_formation_sink && t->ci->hydro.count > 0 &&

@@ -1073,3 +1073,36 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
 
   if (timer) TIMER_TOC(timer_end_rt_tchem);
 }
+
+
+/**
+ * @brief Finish up the transport step and do the thermochemistry
+ *        for radiative transfer
+ *
+ * @param r The #runner thread.
+ * @param c The #cell.
+ * @param timer Are we timing this ?
+ */
+void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
+
+  const struct engine *e = r->e;
+  const int count = c->hydro.count;
+  /* const int with_cosmology = (e->policy & engine_policy_cosmology); */
+  /* struct rt_props *rt_props = e->rt_props; */
+  /* const struct hydro_props *hydro_props = e->hydro_properties; */
+  /* const struct cosmology *cosmo = e->cosmology; */
+  /* const struct phys_const *phys_const = e->physical_constants; */
+  /* const struct unit_system *us = e->internal_units; */
+
+  /* Anything to do here? */
+  if (count == 0) return;
+  if (!cell_is_active_hydro(c, e)) return;
+
+  TIMER_TIC;
+
+  message("Ran reschedule on cell %lld", c->cellID);
+
+  if (timer) TIMER_TOC(timer_end_rt_tchem);
+}
+
+

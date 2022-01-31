@@ -620,6 +620,9 @@ void *runner_main(void *data) {
         case task_type_rt_tchem:
           runner_do_rt_tchem(r, t->ci, 1);
           break;
+        case task_type_rt_reschedule:
+          runner_do_rt_reschedule(r, t->ci, 1);
+          break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
       }
