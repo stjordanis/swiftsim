@@ -207,6 +207,11 @@ struct cell_hydro {
 
   /*! Nr of #part in this cell. */
   int count;
+
+  /* Temporary vars for RT subcycling */
+  /*! which cycle are we on? */
+  int rt_cycle;
+
 };
 
 #endif /* SWIFT_CELL_HYDRO_H */

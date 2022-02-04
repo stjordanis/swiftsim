@@ -2286,7 +2286,8 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
-      error("Negative wait!");
+      /* TODO MLADEN: temporary */
+      error("Negative wait! %s %d cell %lld", taskID_names[t->type], res, t2->ci->cellID);
     } else if (res == 1) {
       scheduler_enqueue(s, t2);
     }

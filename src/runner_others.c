@@ -1075,7 +1075,6 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
   if (timer) TIMER_TOC(timer_end_rt_tchem);
 }
 
-
 /**
  * @brief Finish up the transport step and do the thermochemistry
  *        for radiative transfer
@@ -1083,26 +1082,27 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
  * @param r The #runner thread.
  * @param c The #cell.
  * @param timer Are we timing this ?
+ * @return 1 if rescheduled successfully, 0 otherwise.
  */
-void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
+int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
   const struct engine *e = r->e;
   const int count = c->hydro.count;
 
   /* Anything to do here? */
-  if (!e->subcycle_rt) return;
-  if (count == 0) return;
-  if (!cell_is_active_hydro(c, e)) return;
+  if (!e->subcycle_rt) return 0;
+  if (count == 0) return 0;
+  if (!cell_is_active_hydro(c, e)) return 0;
 
   TIMER_TIC;
 
-  /* Recurse? */
-  if (c->split) {
-    for (int k = 0; k < 8; k++)
-      if (c->progeny[k] != NULL) runner_do_rt_reschedule(r, c->progeny[k], 0);
-  } else {
-    rt_reschedule(r, c);
-  }
+  /* We don't recurse here. We stay at the level at which this
+   * task is being called, as we're not doing any actual work. */
+  int res = rt_reschedule(r, c);
+  message("cell %lld res %d", c->cellID, res);
 
   if (timer) TIMER_TOC(timer_end_rt_reschedule);
+
+  return res;
 }
+
