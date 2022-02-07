@@ -850,6 +850,85 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
 }
 
 
+
+
+
+/**
+ * @brief Prepare a particle for the matrix calculation.
+ *
+ * This function is called after the gradient loop and before the force loop.
+ *
+ * We use it to set the physical timestep for the particle and to copy the
+ * actual velocities, which we need to boost our interfaces during the flux
+ * calculation. We also initialize the variables used for the time step
+ * calculation.
+ *
+ * @param p The particle to act upon.
+ * @param xp The extended particle data to act upon.
+ * @param cosmo The cosmological model.
+ * @param hydro_props Hydrodynamic properties.
+ */
+__attribute__((always_inline)) INLINE static void hydro_prepare_matrix(
+    struct part *restrict p, struct xpart *restrict xp,
+    const struct cosmology *cosmo, const struct hydro_props *hydro_props) {
+
+  
+}
+
+/**
+ * @brief Resets the variables that are required for a matrix calculation.
+ *
+ * This function is called after hydro_prepare_matrix.
+ *
+ * @param p The particle to act upon.
+ * @param xp The extended particle data to act upon.
+ * @param cosmo The cosmological model.
+ */
+__attribute__((always_inline)) INLINE static void hydro_reset_matrix(
+    struct part *restrict p) {
+
+}
+
+/**
+ * @brief Finishes the matrix calculation.
+ *
+ * Just a wrapper around hydro_matrix_finalize, which can be an empty method
+ *
+ * This method also initializes the force loop variables.
+ *
+ * @param p The particle to act upon.
+ */
+__attribute__((always_inline)) INLINE static void hydro_end_matrix(
+    struct part *p) {
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * @brief Prepare a particle for the force calculation.
  *
