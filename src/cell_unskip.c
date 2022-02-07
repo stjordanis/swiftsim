@@ -1665,6 +1665,7 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 
 #ifdef EXTRA_HYDRO_LOOP
             scheduler_activate_recv(s, ci->mpi.recv, task_subtype_gradient);
+            scheduler_activate_recv(s, ci->mpi.recv, task_subtype_matrix); /* matrix loop */
 #endif
           }
         }
@@ -1698,6 +1699,8 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 #ifdef EXTRA_HYDRO_LOOP
             scheduler_activate_send(s, cj->mpi.send, task_subtype_gradient,
                                     ci_nodeID);
+            scheduler_activate_send(s, cj->mpi.send, task_subtype_matrix,
+                                    ci_nodeID); /* matrix loop */
 #endif
           }
         }
@@ -1738,6 +1741,7 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 
 #ifdef EXTRA_HYDRO_LOOP
             scheduler_activate_recv(s, cj->mpi.recv, task_subtype_gradient);
+            scheduler_activate_recv(s, cj->mpi.recv, task_subtype_matrix); /* matrix loop */
 #endif
           }
         }
@@ -1772,6 +1776,8 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 #ifdef EXTRA_HYDRO_LOOP
             scheduler_activate_send(s, ci->mpi.send, task_subtype_gradient,
                                     cj_nodeID);
+            scheduler_activate_send(s, ci->mpi.send, task_subtype_matrix,
+                                    cj_nodeID); /* matrix loop */
 #endif
           }
         }
@@ -1811,6 +1817,9 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
   if (c->nodeID == nodeID && cell_is_active_hydro(c, e)) {
     for (struct link *l = c->hydro.gradient; l != NULL; l = l->next) {
       scheduler_activate(s, l->t);
+    }
+    for (struct link *l = c->hydro.matrix; l != NULL; l = l->next) {
+      scheduler_activate(s, l->t); /* matrix loop */
     }
     for (struct link *l = c->hydro.force; l != NULL; l = l->next) {
       scheduler_activate(s, l->t);

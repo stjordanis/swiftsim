@@ -37,6 +37,7 @@ struct task;
 /* Unique identifier of loop types */
 #define TASK_LOOP_DENSITY 0
 #define TASK_LOOP_GRADIENT 1
+#define TASK_LOOP_MATRIX 99 /* matrix loop */
 #define TASK_LOOP_FORCE 2
 #define TASK_LOOP_LIMITER 3
 #define TASK_LOOP_FEEDBACK 4
@@ -94,6 +95,7 @@ struct runner {
 /* Function prototypes. */
 void runner_do_ghost(struct runner *r, struct cell *c, int timer);
 void runner_do_extra_ghost(struct runner *r, struct cell *c, int timer);
+void runner_do_matrix_ghost(struct runner *r, struct cell *c, int timer); /* matrix loop */
 void runner_do_stars_ghost(struct runner *r, struct cell *c, int timer);
 void runner_do_black_holes_density_ghost(struct runner *r, struct cell *c,
                                          int timer);

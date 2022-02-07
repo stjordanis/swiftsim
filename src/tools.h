@@ -40,6 +40,8 @@ void pairs_all_density(struct runner *r, struct cell *ci, struct cell *cj);
 void self_all_density(struct runner *r, struct cell *ci);
 void pairs_all_gradient(struct runner *r, struct cell *ci, struct cell *cj);
 void self_all_gradient(struct runner *r, struct cell *ci);
+void pairs_all_matrix(struct runner *r, struct cell *ci, struct cell *cj); /* matrix loop */
+void self_all_matrix(struct runner *r, struct cell *ci); /* matrix loop */
 void pairs_all_force(struct runner *r, struct cell *ci, struct cell *cj);
 void self_all_force(struct runner *r, struct cell *ci);
 void pairs_all_stars_density(struct runner *r, struct cell *ci,

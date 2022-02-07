@@ -1429,7 +1429,7 @@ static void partition_gather_weights(void *map_data, int num_elements,
 
     /* Different weights for different tasks. */
     if (t->type == task_type_drift_part || t->type == task_type_drift_gpart ||
-        t->type == task_type_ghost || t->type == task_type_extra_ghost ||
+        t->type == task_type_ghost || t->type == task_type_extra_ghost || t->type == task_type_matrix_ghost || /* matrix loop */
         t->type == task_type_kick1 || t->type == task_type_kick2 ||
         t->type == task_type_end_hydro_force ||
         t->type == task_type_end_grav_force || t->type == task_type_cooling ||
@@ -2349,7 +2349,7 @@ static void check_weights(struct task *tasks, int nr_tasks,
 
     /* Different weights for different tasks. */
     if (t->type == task_type_drift_part || t->type == task_type_drift_gpart ||
-        t->type == task_type_ghost || t->type == task_type_extra_ghost ||
+        t->type == task_type_ghost || t->type == task_type_extra_ghost ||  t->type == task_type_matrix_ghost || /* matrix loop */
         t->type == task_type_kick1 || t->type == task_type_kick2 ||
         t->type == task_type_end_hydro_force ||
         t->type == task_type_end_grav_force || t->type == task_type_cooling ||

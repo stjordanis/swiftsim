@@ -577,6 +577,7 @@ void cell_sanitize(struct cell *c, int treated) {
 void cell_clean_links(struct cell *c, void *data) {
   c->hydro.density = NULL;
   c->hydro.gradient = NULL;
+  c->hydro.matrix = NULL; /* matrix_loop */
   c->hydro.force = NULL;
   c->hydro.limiter = NULL;
   c->hydro.rt_inject = NULL;

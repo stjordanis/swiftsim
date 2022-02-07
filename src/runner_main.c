@@ -56,6 +56,16 @@
 #undef FUNCTION_TASK_LOOP
 #endif
 
+/* Import the matrix loop functions (if required). */ /* matrix loop */
+#ifdef EXTRA_HYDRO_LOOP
+#define FUNCTION matrix
+#define FUNCTION_TASK_LOOP TASK_LOOP_MATRIX
+#include "runner_doiact_hydro.h"
+#undef FUNCTION
+#undef FUNCTION_TASK_LOOP
+#endif
+
+
 /* Import the force loop functions. */
 #define FUNCTION force
 #define FUNCTION_TASK_LOOP TASK_LOOP_FORCE
@@ -247,6 +257,9 @@ void *runner_main(void *data) {
           else if (t->subtype == task_subtype_gradient)
             runner_doself1_branch_gradient(r, ci, /*limit_h_min=*/0,
                                            /*limit_h_max=*/0);
+          else if (t->subtype == task_subtype_matrix)
+            runner_doself1_branch_matrix(r, ci, /*limit_h_min=*/0,
+                                           /*limit_h_max=*/0); /* matrix loop */
 #endif
           else if (t->subtype == task_subtype_force)
             runner_doself2_branch_force(r, ci, /*limit_h_min=*/0,
@@ -310,6 +323,9 @@ void *runner_main(void *data) {
           else if (t->subtype == task_subtype_gradient)
             runner_dopair1_branch_gradient(r, ci, cj, /*limit_h_min=*/0,
                                            /*limit_h_max=*/0);
+          else if (t->subtype == task_subtype_matrix)
+            runner_dopair1_branch_matrix(r, ci, cj, /*limit_h_min=*/0,
+                                           /*limit_h_max=*/0); /* matrix loop */
 #endif
           else if (t->subtype == task_subtype_force)
             runner_dopair2_branch_force(r, ci, cj, /*limit_h_min=*/0,
@@ -368,6 +384,8 @@ void *runner_main(void *data) {
 #ifdef EXTRA_HYDRO_LOOP
           else if (t->subtype == task_subtype_gradient)
             runner_dosub_self1_gradient(r, ci, /*below_h_max=*/0, 1);
+          else if (t->subtype == task_subtype_matrix)
+            runner_dosub_self1_matrix(r, ci, /*below_h_max=*/0, 1); /* matrix loop */
 #endif
           else if (t->subtype == task_subtype_force)
             runner_dosub_self2_force(r, ci, /*below_h_max=*/0, 1);
@@ -416,6 +434,8 @@ void *runner_main(void *data) {
 #ifdef EXTRA_HYDRO_LOOP
           else if (t->subtype == task_subtype_gradient)
             runner_dosub_pair1_gradient(r, ci, cj, /*below_h_max=*/0, 1);
+          else if (t->subtype == task_subtype_matrix)
+            runner_dosub_pair1_matrix(r, ci, cj, /*below_h_max=*/0, 1); /* matrix loop */
 #endif
           else if (t->subtype == task_subtype_force)
             runner_dosub_pair2_force(r, ci, cj, /*below_h_max=*/0, 1);
@@ -484,6 +504,9 @@ void *runner_main(void *data) {
 #ifdef EXTRA_HYDRO_LOOP
         case task_type_extra_ghost:
           runner_do_extra_ghost(r, ci, 1);
+          break;
+        case task_type_matrix_ghost:
+          runner_do_matrix_ghost(r, ci, 1); /* matrix loop */
           break;
 #endif
         case task_type_stars_ghost:
@@ -578,6 +601,8 @@ void *runner_main(void *data) {
             runner_do_recv_part(r, ci, 0, 1);
           } else if (t->subtype == task_subtype_gradient) {
             runner_do_recv_part(r, ci, 0, 1);
+          } else if (t->subtype == task_subtype_matrix) {
+            runner_do_recv_part(r, ci, 0, 1); /* matrix loop */
           } else if (t->subtype == task_subtype_part_swallow) {
             cell_unpack_part_swallow(ci,
                                      (struct black_holes_part_data *)t->buff);
