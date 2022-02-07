@@ -353,41 +353,6 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pj->sum_wij_exp_T += pi->T * wj * expf(-pi->I*pi->I);
 #endif
     
-#ifdef PLANETARY_MATRIX_INVERSION
-    int i,j,k;
-    for (i = 0; i < 3; ++i) {
-      for (j = 0; j < 3; ++j) {
-          
-          /* Inverse of C matrix (eq 6 in Rosswog 2020) */
-          pi->Cinv[i][j] += pj->mass * dx[i] * dx[j] * wi * rho_inv_j;
-          pj->Cinv[i][j] += pi->mass * dx[i] * dx[j] * wj * rho_inv_i;
-          
-          /* Gradients from eq 18 in Rosswog 2020 (without C multiplied)*/
-          pi->dv[i][j] += pj->mass * (pi->v[i] - pj->v[i]) * dx[j] * wi  * rho_inv_j;
-          pj->dv[i][j] += pi->mass * (pi->v[i] - pj->v[i]) * dx[j] * wj  * rho_inv_i;
-          
-         for (k = 0; k < 3; ++k) {
-             
-              /* Gradients from eq 18 in Rosswog 2020 (without C multiplied). Note that we now use dv_aux to get second derivative*/
-              pi->ddv[i][j][k] += pj->mass * (pi->dv_aux[i][j] - pj->dv_aux[i][j]) * dx[k] * wi  * rho_inv_j;
-              pj->ddv[i][j][k] += pi->mass * (pi->dv_aux[i][j] - pj->dv_aux[i][j]) * dx[k] * wj  * rho_inv_i;
-
-             
-         }
-      }
-   }
-    
-    #if defined(HYDRO_DIMENSION_2D)
-    /* This is so we can do 3x3 matrix inverse even when 2D */
-    pi->Cinv[2][2] = 1.f;
-    pj->Cinv[2][2] = 1.f;
-
-    #endif
-    
-  /* Number of neighbours. Needed for eta_crit factor in slope limiter */  
-  pi->N_grad+=1.f;
-  pj->N_grad+=1.f;
-#endif
 }
 
 /**
@@ -435,7 +400,126 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
   pi->sum_wij_exp_T += pj->T * wi * expf(-pj->I*pj->I);
 #endif
     
-#ifdef PLANETARY_MATRIX_INVERSION   
+  
+}
+
+
+
+
+
+/**
+ * @brief Calculate the matrix interaction between particle i and particle j
+ *
+ * This method wraps around hydro_matrices_collect, which can be an empty
+ * method, in which case no matrices are used.
+ *
+ * @param r2 Comoving square distance between the two particles.
+ * @param dx Comoving vector separating both particles (pi - pj).
+ * @param hi Comoving smoothing-length of particle i.
+ * @param hj Comoving smoothing-length of particle j.
+ * @param pi First particle.
+ * @param pj Second particle.
+ * @param a Current scale factor.
+ * @param H Current Hubble parameter.
+ */
+__attribute__((always_inline)) INLINE static void runner_iact_matrix(
+    float r2, const float *dx, float hi, float hj, struct part *restrict pi,
+    struct part *restrict pj, float a, float H) {
+    
+#ifdef PLANETARY_MATRIX_INVERSION
+
+
+	float wi, wj, wi_dx, wj_dx;
+
+	  /* Get r and 1/r. */
+	  const float r = sqrtf(r2);
+
+	  /* Compute kernel of pi. */
+	  const float hi_inv = 1.f / hi;
+	  const float ui = r * hi_inv;
+	  kernel_deval(ui, &wi, &wi_dx);
+	  
+	  /* Compute kernel of pj. */
+	  const float hj_inv = 1.f / hj;
+	  const float uj = r * hj_inv;
+	  kernel_deval(uj, &wj, &wj_dx);
+	  
+	  const float rho_inv_i = 1.f / pi->rho;
+  	const float rho_inv_j = 1.f / pj->rho;
+
+
+    int i,j,k;
+    for (i = 0; i < 3; ++i) {
+      for (j = 0; j < 3; ++j) {
+          
+          /* Inverse of C matrix (eq 6 in Rosswog 2020) */
+          pi->Cinv[i][j] += pj->mass * dx[i] * dx[j] * wi * rho_inv_j;
+          pj->Cinv[i][j] += pi->mass * dx[i] * dx[j] * wj * rho_inv_i;
+          
+          /* Gradients from eq 18 in Rosswog 2020 (without C multiplied)*/
+          pi->dv[i][j] += pj->mass * (pi->v[i] - pj->v[i]) * dx[j] * wi  * rho_inv_j;
+          pj->dv[i][j] += pi->mass * (pi->v[i] - pj->v[i]) * dx[j] * wj  * rho_inv_i;
+          
+         for (k = 0; k < 3; ++k) {
+             
+              /* Gradients from eq 18 in Rosswog 2020 (without C multiplied). Note that we now use dv_aux to get second derivative*/
+              pi->ddv[i][j][k] += pj->mass * (pi->dv_aux[i][j] - pj->dv_aux[i][j]) * dx[k] * wi  * rho_inv_j;
+              pj->ddv[i][j][k] += pi->mass * (pi->dv_aux[i][j] - pj->dv_aux[i][j]) * dx[k] * wj  * rho_inv_i;
+
+             
+         }
+      }
+   }
+    
+    #if defined(HYDRO_DIMENSION_2D)
+    /* This is so we can do 3x3 matrix inverse even when 2D */
+    pi->Cinv[2][2] = 1.f;
+    pj->Cinv[2][2] = 1.f;
+
+    #endif
+    
+  /* Number of neighbours. Needed for eta_crit factor in slope limiter */  
+  pi->N_grad+=1.f;
+  pj->N_grad+=1.f;
+#endif
+
+}
+
+/**
+ * @brief Calculate the matrix interaction between particle i and particle j:
+ * non-symmetric version
+ *
+ * This method wraps around hydro_matrices_nonsym_collect, which can be an
+ * empty method, in which case no gradients are used.
+ *
+ * @param r2 Comoving square distance between the two particles.
+ * @param dx Comoving vector separating both particles (pi - pj).
+ * @param hi Comoving smoothing-length of particle i.
+ * @param hj Comoving smoothing-length of particle j.
+ * @param pi First particle.
+ * @param pj Second particle (not updated).
+ * @param a Current scale factor.
+ * @param H Current Hubble parameter.
+ */
+__attribute__((always_inline)) INLINE static void runner_iact_nonsym_matrix(
+    float r2, const float *dx, float hi, float hj, struct part *restrict pi,
+    const struct part *restrict pj, float a, float H) {
+    
+    
+#ifdef PLANETARY_MATRIX_INVERSION  
+
+ float wi, wi_dx;
+
+  /* Get r and 1/r. */
+  const float r = sqrtf(r2);
+
+  /* Compute kernel of pi. */
+  const float h_inv = 1.f / hi;
+  const float ui = r * h_inv;
+  kernel_deval(ui, &wi, &wi_dx);
+  
+  const float rho_inv_j = 1.f / pj->rho;
+ 
     int i,j,k;
     for (i = 0; i < 3; ++i) { 
       for (j = 0; j < 3; ++j) {
@@ -462,53 +546,6 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
     /* Number of neighbours. Needed for eta_crit factor in slope limiter */
     pi->N_grad+=1.f;
 #endif
-  
-}
-
-
-
-
-
-/**
- * @brief Calculate the matrix interaction between particle i and particle j
- *
- * This method wraps around hydro_matrices_collect, which can be an empty
- * method, in which case no matrices are used.
- *
- * @param r2 Comoving square distance between the two particles.
- * @param dx Comoving vector separating both particles (pi - pj).
- * @param hi Comoving smoothing-length of particle i.
- * @param hj Comoving smoothing-length of particle j.
- * @param pi First particle.
- * @param pj Second particle.
- * @param a Current scale factor.
- * @param H Current Hubble parameter.
- */
-__attribute__((always_inline)) INLINE static void runner_iact_matrix(
-    float r2, const float *dx, float hi, float hj, struct part *restrict pi,
-    struct part *restrict pj, float a, float H) {
-
-}
-
-/**
- * @brief Calculate the matrix interaction between particle i and particle j:
- * non-symmetric version
- *
- * This method wraps around hydro_matrices_nonsym_collect, which can be an
- * empty method, in which case no gradients are used.
- *
- * @param r2 Comoving square distance between the two particles.
- * @param dx Comoving vector separating both particles (pi - pj).
- * @param hi Comoving smoothing-length of particle i.
- * @param hj Comoving smoothing-length of particle j.
- * @param pi First particle.
- * @param pj Second particle (not updated).
- * @param a Current scale factor.
- * @param H Current Hubble parameter.
- */
-__attribute__((always_inline)) INLINE static void runner_iact_nonsym_matrix(
-    float r2, const float *dx, float hi, float hj, struct part *restrict pi,
-    const struct part *restrict pj, float a, float H) {
   
 }
 

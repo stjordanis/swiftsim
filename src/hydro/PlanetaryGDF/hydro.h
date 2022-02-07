@@ -736,25 +736,7 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_gradient(
   
 #endif
     
-#ifdef PLANETARY_MATRIX_INVERSION          
-    
-    int i,j,k;
-    for (i = 0; i < 3; ++i) {
-      for (j = 0; j < 3; ++j) {
-          
-         p->Cinv[i][j] = 0.f;
-         p->dv[i][j] = 0.f;
-          
-         for (k = 0; k < 3; ++k) {
-            p->ddv[i][j][k] = 0.f;
-         }
-      }
-   }
-    
-    
-    p->N_grad=0.f;
 
-#endif
 }
 
 /**
@@ -871,6 +853,27 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
 __attribute__((always_inline)) INLINE static void hydro_prepare_matrix(
     struct part *restrict p, struct xpart *restrict xp,
     const struct cosmology *cosmo, const struct hydro_props *hydro_props) {
+
+
+#ifdef PLANETARY_MATRIX_INVERSION  
+ 
+    int i,j,k;
+    for (i = 0; i < 3; ++i) {
+      for (j = 0; j < 3; ++j) {
+          
+         p->Cinv[i][j] = 0.f;
+         p->dv[i][j] = 0.f;
+          
+         for (k = 0; k < 3; ++k) {
+            p->ddv[i][j][k] = 0.f;
+         }
+      }
+   }
+    
+    
+    p->N_grad=0.f;
+
+#endif
 
   
 }
