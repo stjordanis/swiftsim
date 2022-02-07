@@ -1007,9 +1007,9 @@ void runner_do_extra_ghost(struct runner *r, struct cell *c, int timer) {
   struct xpart *restrict xparts = c->hydro.xparts;
   const int count = c->hydro.count;
   const struct engine *e = r->e;
-  const integertime_t ti_current = e->ti_current;
-  const int with_cosmology = (e->policy & engine_policy_cosmology);
-  const double time_base = e->time_base;
+  //const integertime_t ti_current = e->ti_current;
+  //const int with_cosmology = (e->policy & engine_policy_cosmology);
+  //const double time_base = e->time_base;
   const struct cosmology *cosmo = e->cosmology;
   const struct hydro_props *hydro_props = e->hydro_properties;
 
@@ -1041,6 +1041,7 @@ void runner_do_extra_ghost(struct runner *r, struct cell *c, int timer) {
         /* Calculate the time-step for passing to hydro_prepare_force.
          * This is the physical time between the start and end of the time-step
          * without any scale-factor powers. */
+         /*
         double dt_alpha;
 
         if (with_cosmology) {
@@ -1053,16 +1054,16 @@ void runner_do_extra_ghost(struct runner *r, struct cell *c, int timer) {
         } else {
           dt_alpha = get_timestep(p->time_bin, time_base);
         }
-
+	*/
         /* Compute variables required for the force loop */
         hydro_prepare_matrix(p, xp, cosmo, hydro_props); /* matrix loop */
-        timestep_limiter_prepare_force(p, xp);
+        //timestep_limiter_prepare_force(p, xp);
 
         /* The particle force values are now set.  Do _NOT_
            try to read any particle density variables! */
 
         /* Prepare the particle for the force loop over neighbours */
-        hydro_reset_acceleration(p);
+        hydro_reset_matrix(p); /* matrix loop */
       }
     }
   }

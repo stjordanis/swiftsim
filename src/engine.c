@@ -1594,6 +1594,7 @@ void engine_skip_force_and_kick(struct engine *e) {
         t->subtype == task_subtype_force ||
         t->subtype == task_subtype_limiter ||
         t->subtype == task_subtype_gradient ||
+        t->subtype == task_subtype_matrix || /* matrix loop */
         t->subtype == task_subtype_stars_prep1 ||
         t->subtype == task_subtype_stars_prep2 ||
         t->subtype == task_subtype_stars_feedback ||

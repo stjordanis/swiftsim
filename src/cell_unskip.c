@@ -1830,6 +1830,8 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 
     if (c->hydro.extra_ghost != NULL)
       scheduler_activate(s, c->hydro.extra_ghost);
+    if (c->hydro.matrix_ghost != NULL)
+      scheduler_activate(s, c->hydro.matrix_ghost); /* matrix loop */
     if (c->hydro.ghost_in != NULL) cell_activate_hydro_ghosts(c, s, e);
     if (c->kick1 != NULL) scheduler_activate(s, c->kick1);
     if (c->kick2 != NULL) scheduler_activate(s, c->kick2);
