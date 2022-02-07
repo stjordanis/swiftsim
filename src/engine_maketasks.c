@@ -682,7 +682,7 @@ void engine_addtasks_recv_hydro(struct engine *e, struct cell *c,
   if (c->split)
     for (int k = 0; k < 8; k++)
       if (c->progeny[k] != NULL)
-        engine_addtasks_recv_hydro(e, c->progeny[k], t_xv, t_rho, t_gradient,
+        engine_addtasks_recv_hydro(e, c->progeny[k], t_xv, t_rho, t_gradient, t_matrix, /* matrix loop */
                                    t_ti, t_prep1, t_limiter, t_unpack_limiter,
                                    with_feedback, with_black_holes,
                                    with_limiter, with_sync);

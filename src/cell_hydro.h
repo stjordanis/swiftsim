@@ -63,6 +63,9 @@ struct cell_hydro {
 
     /* Linked list of the tasks computing this cell's hydro gradients. */
     struct link *gradient;
+    
+    /* Linked list of the tasks computing this cell's hydro matrices. */
+    struct link *matrix; /* matrix loop */
 
     /*! Linked list of the tasks computing this cell's hydro forces. */
     struct link *force;
@@ -84,6 +87,9 @@ struct cell_hydro {
 
     /*! The extra ghost task for complex hydro schemes */
     struct task *extra_ghost;
+    
+    /*! The matrix ghost task for complex hydro schemes */
+    struct task *matrix_ghost; /* matrix loop */
 
     /*! The task to end the force calculation */
     struct task *end_force;
