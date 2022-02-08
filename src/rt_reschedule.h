@@ -37,8 +37,7 @@
  * TODO: docs
  */
 INLINE static void rt_reschedule_task(struct engine* e, struct task *t, struct cell* c, int wait, int callloc) {
-  /* TODO: remove cell parameter later */
-  struct scheduler* sched = &e->sched;
+  /* TODO: remove cell parameter later . possibly engine too? */
 
   if (t == NULL) return;
 
@@ -55,8 +54,6 @@ INLINE static void rt_reschedule_task(struct engine* e, struct task *t, struct c
 
   /* atomic_inc(&sched->waiting); */
 
-  message("Ran reschedule on cell %lld cycle %d, callloc %d", c->cellID, c->hydro.rt_cycle, callloc);
-  scheduler_enqueue(sched, t);
 }
 
 /**
@@ -87,6 +84,7 @@ INLINE static void rt_reschedule_rescheduler(struct runner *r, struct cell *c, s
  */
 INLINE static int rt_reschedule(struct runner *r, struct cell *c){
   struct engine *e = r->e;
+  struct scheduler* sched = &e->sched;
   if (!e->subcycle_rt) return 0;
 
   message("called rt_reschedule cell %lld at cycle %d", c->cellID, c->hydro.rt_cycle);
@@ -96,10 +94,20 @@ INLINE static int rt_reschedule(struct runner *r, struct cell *c){
     c->hydro.rt_cycle = 0;
     return 0;
   } else {
-    /* Note to self: Later I might just enqueue the top level task back,
-     * while it's enough to just reset the quantities for the others */
+    /* Note to self: We're only enqueueing the task at the top of the hierarchy,
+     * and setting all others below to enqueueable states.
+     * Pay attention to whether task you're enqueueing is implicit or not: They
+     * are handled differently in scheduler_enqueue(). In particular, pay attention
+     * to which value to re-set task->wait. */
     struct task *rt_tchem = c->hydro.rt_tchem;
-    rt_reschedule_task(e, rt_tchem, c, /*wait =*/2, /*callloc=*/1);
+    rt_reschedule_task(e, rt_tchem, c, /*wait =*/1, /*callloc=*/1);
+
+    struct task *rt_transport_out = c->hydro.rt_transport_out;
+    rt_reschedule_task(e, rt_transport_out, c, /*wait =*/1, /*callloc=*/1);
+
+
+    message("Ran reschedule on cell %lld cycle %d, callloc %d", c->cellID, c->hydro.rt_cycle, 100);
+    scheduler_enqueue(sched, rt_transport_out, 100);
     c->hydro.rt_cycle += 1;
 
     /* TODO: we need to increase the wains of the time step task

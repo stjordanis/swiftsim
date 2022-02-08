@@ -266,7 +266,7 @@ void scheduler_init(struct scheduler *s, struct space *space, int nr_tasks,
                     struct threadpool *tp);
 struct task *scheduler_gettask(struct scheduler *s, int qid,
                                const struct task *prev);
-void scheduler_enqueue(struct scheduler *s, struct task *t);
+void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc);
 void scheduler_start(struct scheduler *s);
 void scheduler_reset(struct scheduler *s, int nr_tasks);
 void scheduler_ranktasks(struct scheduler *s);

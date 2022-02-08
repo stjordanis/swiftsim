@@ -1935,7 +1935,7 @@ void scheduler_enqueue_mapper(void *map_data, int num_elements,
   for (int ind = 0; ind < num_elements; ind++) {
     struct task *t = &tasks[tid[ind]];
     if (atomic_dec(&t->wait) == 1 && !t->skip) {
-      scheduler_enqueue(s, t);
+      scheduler_enqueue(s, t, 3);
     }
   }
   pthread_cond_broadcast(&s->sleep_cond);
@@ -1979,7 +1979,7 @@ void scheduler_start(struct scheduler *s) {
  * @param s The #scheduler.
  * @param t The #task.
  */
-void scheduler_enqueue(struct scheduler *s, struct task *t) {
+void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
   /* The target queue for this task. */
   int qid = -1;
 
@@ -1994,7 +1994,11 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
     t->skip = 1;
     for (int j = 0; j < t->nr_unlock_tasks; j++) {
       struct task *t2 = t->unlock_tasks[j];
-      if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2);
+      if (t2->type == task_type_rt_tchem && t2->ci->cellID == 365) message("tchem in scheduler_enqueue (after implicit task) before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+      if (atomic_dec(&t2->wait) == 1) {scheduler_enqueue(s, t2, callloc);
+      if (t2->type == task_type_rt_tchem && t2->ci->cellID == 365) message("tchem in scheduler_enqueue (after implicit task) after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+      
+      }
     }
   }
 
@@ -2260,6 +2264,7 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
     /* Increase the waiting counter. */
     atomic_inc(&s->waiting);
 
+    if (t->type == task_type_rt_tchem) message("inserting tchem into queue, callloc=%d", callloc);
     /* Insert the task into that queue. */
     queue_insert(&s->queues[qid], t);
   }
@@ -2282,6 +2287,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
      they are ready. */
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
     struct task *t2 = t->unlock_tasks[k];
+    if (t2->type == task_type_rt_tchem) message("tchem in scheduler_done before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
     if (t2->skip) continue;
 
     const int res = atomic_dec(&t2->wait);
@@ -2289,7 +2295,8 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
       /* TODO MLADEN: temporary */
       error("Negative wait! %s %d cell %lld", taskID_names[t->type], res, t2->ci->cellID);
     } else if (res == 1) {
-      scheduler_enqueue(s, t2);
+      if (t2->type == task_type_rt_tchem) message("tchem in scheduler_done after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+      scheduler_enqueue(s, t2, 1);
     }
   }
 
@@ -2330,7 +2337,7 @@ struct task *scheduler_unlock(struct scheduler *s, struct task *t) {
     if (res < 1) {
       error("Negative wait!");
     } else if (res == 1) {
-      scheduler_enqueue(s, t2);
+      scheduler_enqueue(s, t2, 2);
     }
   }
 
