@@ -523,6 +523,11 @@ for (i = 0; i < 3; ++i) {
       }
 }
 #endif
+
+p->grad_rho[0] = 0.f;
+p->grad_rho[1] = 0.f;
+p->grad_rho[2] = 0.f;
+
     
 }
 
@@ -645,6 +650,13 @@ __attribute__((always_inline)) INLINE static void hydro_end_density(
    }
 
 #endif    
+
+
+  p->grad_rho[0] *= h_inv_dim_plus_one;
+  p->grad_rho[1] *= h_inv_dim_plus_one;
+  p->grad_rho[2] *= h_inv_dim_plus_one;
+
+
     
 }
 
@@ -735,6 +747,13 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_gradient(
     //}
   
 #endif
+
+
+  p->sum_rij_over_rho[0] = 0.f;
+  p->sum_rij_over_rho[1] = 0.f;
+  p->sum_rij_over_rho[2] = 0.f;
+  
+  p->sum_wij_over_rho = 0.f;
     
 
 }
@@ -773,6 +792,11 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
     /* Compute f_gdf normally*/
     p->f_gdf = p->weighted_wcount / (p->weighted_neighbour_wcount * p->rho);
   }
+  
+  
+  
+    
+    
 
 #ifdef PLANETARY_IMBALANCE
   /* Add self contribution to kernel averages*/
@@ -785,6 +809,31 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
   const float h_inv = 1.0f / h;                 /* 1/h */
   const float h_inv_dim = pow_dimension(h_inv); /* 1/h^d */
   const float rho_min = p->mass * kernel_root * h_inv_dim;
+  
+  
+  
+  p->sum_wij_over_rho += kernel_root * p->mass / p->rho; 
+  p->sum_wij_over_rho *= h_inv_dim;
+  
+  p->sum_rij_over_rho[0] *= h_inv_dim;
+  p->sum_rij_over_rho[1] *= h_inv_dim;
+  p->sum_rij_over_rho[2] *= h_inv_dim;
+  
+  //p->I =(p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho;
+    
+    
+  //p->I /=  p->sum_wij_over_rho;
+    
+    
+  p->I =1.f/(1.f/(p->sum_wij_over_rho)  -  (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / (p->sum_wij_over_rho * p->rho)) - 1.f;
+
+  p->I = 8.3*fabs(p->I);
+
+
+
+
+// p->rho = (p->rho - (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]));// / p->sum_wij_over_rho;
+  
  // const float P_min = gas_pressure_from_internal_energy(rho_min, p->u, p->mat_id);
  // const float T_min = gas_temperature_from_internal_energy(rho_min, p->u, p->mat_id);
  
@@ -792,22 +841,24 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
     //if (p->imbalance_flag == 1) {
     
   /* Bullet proof */
+  
+
   if (p->sum_wij_exp > 0.f && p->sum_wij_exp_P > 0.f && p->sum_wij_exp_T > 0.f && p->I > 0.f){
-	  /* End computation */
+	  
 	  p->sum_wij_exp_P /= p->sum_wij_exp;
 	  p->sum_wij_exp_T /= p->sum_wij_exp;
 	  
-	  /* Compute new P */ 
+	  
 	  float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_P;
 
-    /* Compute new T */
-	  float T_new = expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
+    
+	  float T_new = p->T;//expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
           
-	  /* Compute new density */
+	  
 	  float rho_new =
 	      gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
    
-	  /* Ensure new density is not lower than minimum SPH density */
+	  
 	  if (rho_new < rho_min){
 	    p->rho = rho_min;
             p->P = gas_pressure_from_internal_energy(p->rho, p->u, p->mat_id);//P_min;
@@ -824,7 +875,7 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
     p->T = T;
   }
 
-  
+
     
 #endif
     

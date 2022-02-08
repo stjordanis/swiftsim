@@ -184,6 +184,18 @@ __attribute__((always_inline)) INLINE static void runner_iact_density(
 
     #endif   
 #endif
+
+
+pi->grad_rho[0] += dx[0]*wi_dx*r_inv*mj;
+pi->grad_rho[1] += dx[1]*wi_dx*r_inv*mj;
+pi->grad_rho[2] += dx[2]*wi_dx*r_inv*mj;
+
+pj->grad_rho[0] += -dx[0]*wj_dx*r_inv*mi;
+pj->grad_rho[1] += -dx[1]*wj_dx*r_inv*mi;
+pj->grad_rho[2] += -dx[2]*wj_dx*r_inv*mi;
+
+
+
 }
 
 /**
@@ -295,6 +307,12 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_density(
 
     #endif   
 #endif
+
+
+pi->grad_rho[0] += dx[0]*wi_dx*r_inv*mj;
+pi->grad_rho[1] += dx[1]*wi_dx*r_inv*mj;
+pi->grad_rho[2] += dx[2]*wi_dx*r_inv*mj;
+
 }
 
 /**
@@ -352,6 +370,26 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pj->sum_wij_exp_P += pi->P * wj * expf(-pi->I*pi->I);
   pj->sum_wij_exp_T += pi->T * wj * expf(-pi->I*pi->I);
 #endif
+
+
+
+  pi->sum_rij_over_rho[0] += -dx[0]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[1] += -dx[1]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[2] += -dx[2]*wi*pj->mass*rho_inv_j;
+
+  pj->sum_rij_over_rho[0] += dx[0]*wj*pi->mass*rho_inv_i;
+  pj->sum_rij_over_rho[1] += dx[1]*wj*pi->mass*rho_inv_i;
+  pj->sum_rij_over_rho[2] += dx[2]*wj*pi->mass*rho_inv_i;
+
+
+  pi->sum_wij_over_rho += wi*pj->mass*rho_inv_j;
+
+  pj->sum_wij_over_rho += wj*pi->mass*rho_inv_i;
+
+
+
+
+
     
 }
 
@@ -401,6 +439,15 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
 #endif
     
   
+  
+  pi->sum_rij_over_rho[0] += -dx[0]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[1] += -dx[1]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[2] += -dx[2]*wi*pj->mass*rho_inv_j;
+  
+  
+  
+  pi->sum_wij_over_rho += wi*pj->mass*rho_inv_j;
+
 }
 
 

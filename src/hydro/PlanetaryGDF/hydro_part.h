@@ -333,6 +333,20 @@ struct part {
     
   /*! Inverse matrix method flag */
   int is_h_max;
+  
+  
+/*! Sum of m/rho r_ij W (used to compute imbalance statistic)*/
+  float sum_rij_over_rho[3];
+  
+  float sum_wij_over_rho;
+  
+  float grad_rho[3];
+  
+  
+  
+  
+  
+  
 #endif
 
 } SWIFT_STRUCT_ALIGN;
