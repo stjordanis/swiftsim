@@ -267,7 +267,6 @@ nobase_noinst_HEADERS += rt_additions.h
 nobase_noinst_HEADERS += rt_io.h 
 nobase_noinst_HEADERS += rt_parameters.h 
 nobase_noinst_HEADERS += rt_properties.h 
-nobase_noinst_HEADERS += rt_reschedule.h  
 nobase_noinst_HEADERS += rt_struct.h 
 nobase_noinst_HEADERS += rt/none/rt.h  
 nobase_noinst_HEADERS += rt/none/rt_additions.h 

@@ -1414,7 +1414,7 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
     }
 
     /* Radiative transfer re-scheduler task */
-    else if (t->type == task_type_rt_reschedule){
+    else if (t->type == task_type_rt_reschedule) {
       if (cell_is_active_hydro(t->ci, e)) scheduler_activate(s, t);
     }
 
