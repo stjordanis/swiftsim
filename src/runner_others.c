@@ -1022,6 +1022,8 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
   if (count == 0) return;
   if (!cell_is_active_hydro(c, e)) return;
 
+  celltrace(c->cellID, "running tchem cycle %d", c->hydro.rt_cycle);
+
   TIMER_TIC;
 
   /* Recurse? */
@@ -1099,7 +1101,8 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
   /* We don't recurse here. We stay at the level at which this
    * task is being called, as we're not doing any actual work. */
   int res = rt_reschedule(r, c);
-  message("cell %lld res %d", c->cellID, res);
+  /* message("cell %lld cycle %d rescheduled? %d", c->cellID, c->hydro.rt_cycle, res); */
+  celltrace(c->cellID, "cycle %d rescheduled? %d", c->hydro.rt_cycle, res);
 
   if (timer) TIMER_TOC(timer_end_rt_reschedule);
 

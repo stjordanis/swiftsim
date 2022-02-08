@@ -1983,6 +1983,14 @@ void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
   /* The target queue for this task. */
   int qid = -1;
 
+  if (t->type == task_type_rt_reschedule)
+    celltrace(t->ci->cellID, "called reschedule task in enqueue, skip=%d", t->skip);
+  if (t->type == task_type_rt_transport_out)
+    celltrace(t->ci->cellID, "called transport_out task in enqueue, skip=%d", t->skip);
+  if (t->type == task_type_rt_out)
+    celltrace(t->ci->cellID, "called rt_out in enqueue, skip=%d", t->skip);
+  if (t->type == task_type_timestep)
+    celltrace(t->ci->cellID, "called timestep task in enqueue, skip=%d", t->skip);
   /* Ignore skipped tasks */
   if (t->skip) return;
 
@@ -1994,11 +2002,7 @@ void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
     t->skip = 1;
     for (int j = 0; j < t->nr_unlock_tasks; j++) {
       struct task *t2 = t->unlock_tasks[j];
-      if (t2->type == task_type_rt_tchem && t2->ci->cellID == 365) message("tchem in scheduler_enqueue (after implicit task) before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
-      if (atomic_dec(&t2->wait) == 1) {scheduler_enqueue(s, t2, callloc);
-      if (t2->type == task_type_rt_tchem && t2->ci->cellID == 365) message("tchem in scheduler_enqueue (after implicit task) after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
-      
-      }
+      if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2, callloc - 100);
     }
   }
 
@@ -2264,9 +2268,14 @@ void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
     /* Increase the waiting counter. */
     atomic_inc(&s->waiting);
 
-    if (t->type == task_type_rt_tchem) message("inserting tchem into queue, callloc=%d", callloc);
     /* Insert the task into that queue. */
     queue_insert(&s->queues[qid], t);
+    /* if (t->type == task_type_rt_tchem) message("inserting tchem into queue, cell %lld cycle %d, callloc=%d", t->ci->cellID, t->ci->hydro.rt_cycle, callloc); */
+    if (t->type == task_type_rt_tchem) celltrace(t->ci->cellID, "inserted tchem into queue, cycle %d, callloc=%d", t->ci->hydro.rt_cycle, callloc);
+    if (t->type == task_type_rt_reschedule) celltrace(t->ci->cellID, "inserted reschedule into queue, cycle %d, callloc=%d", t->ci->hydro.rt_cycle, callloc);
+    if (t->type == task_type_rt_out) celltrace(t->ci->cellID, "inserted rt_out into queue, cycle %d, callloc=%d", t->ci->hydro.rt_cycle, callloc);
+    if (t->type == task_type_rt_transport_out) celltrace(t->ci->cellID, "inserted rt_transport_out into queue, cycle %d, callloc=%d", t->ci->hydro.rt_cycle, callloc);
+    if (t->type == task_type_timestep) celltrace(t->ci->cellID, "inserted timestep into queue, cycle %d, callloc=%d", t->ci->hydro.rt_cycle, callloc);
   }
 }
 
@@ -2283,11 +2292,13 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
   /* Release whatever locks this task held. */
   if (!t->implicit) task_unlock(t);
 
+  /* message("Doing %s/%s cell %lld waiting %d", taskID_names[t->type], subtaskID_names[t->subtype], t->ci->cellID, s->waiting); */
   /* Loop through the dependencies and add them to a queue if
      they are ready. */
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
     struct task *t2 = t->unlock_tasks[k];
-    if (t2->type == task_type_rt_tchem) message("tchem in scheduler_done before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+    if (t2->type == task_type_rt_tchem) celltrace(t2->ci->cellID, "tchem in scheduler_done before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+    if (t2->type == task_type_rt_reschedule) celltrace(t2->ci->cellID, "rescheduler_task in scheduler_done before atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
     if (t2->skip) continue;
 
     const int res = atomic_dec(&t2->wait);
@@ -2295,7 +2306,9 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
       /* TODO MLADEN: temporary */
       error("Negative wait! %s %d cell %lld", taskID_names[t->type], res, t2->ci->cellID);
     } else if (res == 1) {
-      if (t2->type == task_type_rt_tchem) message("tchem in scheduler_done after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+      /* if (t2->type == task_type_rt_tchem) message("tchem in scheduler_done after atomic_dec wait = %d skip = %d", t2->wait, t2->skip); */
+      if (t2->type == task_type_rt_tchem) celltrace(t2->ci->cellID, "tchem in scheduler_done after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
+      if (t2->type == task_type_rt_reschedule) celltrace(t2->ci->cellID, "rescheduler_task in scheduler_done after atomic_dec wait = %d skip = %d", t2->wait, t2->skip);
       scheduler_enqueue(s, t2, 1);
     }
   }

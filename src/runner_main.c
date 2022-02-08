@@ -615,18 +615,18 @@ void *runner_main(void *data) {
           break;
         case task_type_rt_ghost1:
           runner_do_rt_ghost1(r, t->ci, 1);
+          /* message("ran rt_ghost1. cell=%lld, Cycle = %d", t->ci->cellID, t->ci->hydro.rt_cycle); */
           break;
         case task_type_rt_ghost2:
           runner_do_rt_ghost2(r, t->ci, 1);
           break;
         case task_type_rt_tchem:
-          message("rt_tchem wait=%d skip=%d before being called", t->wait, t->skip);
           runner_do_rt_tchem(r, t->ci, 1);
-          message("rt_tchem wait=%d skip=%d after being called", t->wait, t->skip);
+          celltrace(t->ci->cellID, "ran tchem. Cycle = %d", t->ci->hydro.rt_cycle);
+          /* message("ran tchem. cell=%lld, Cycle = %d", t->ci->cellID, t->ci->hydro.rt_cycle); */
           break;
         case task_type_rt_reschedule:
           rescheduled_rt = runner_do_rt_reschedule(r, t->ci, 1);
-          message("Got res %d", rescheduled_rt);
           break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
@@ -651,15 +651,12 @@ void *runner_main(void *data) {
       /* We're done with this task, see if we get a next one. */
       prev = t;
       t = scheduler_done(sched, t);
-      if (prev->type == task_type_rt_tchem)
-        message("rt_tchem wait=%d skip=%d after scheduler_done called", prev->wait, prev->skip);
 
       if (rescheduled_rt) {
         /* can only be the case if RT was rescheduled successfully
          * in this iteration */
-        if (prev->type != task_type_rt_reschedule)
-          error("calling reschedule_rescheduler when prev->type != task_type_reschedule");
-        
+        if (prev->type != task_type_rt_reschedule) error("prev is wrong task type");
+        celltrace(prev->ci->cellID, "calling reschedule rescheduler; cycle %d", prev->ci->hydro.rt_cycle);
         rt_reschedule_rescheduler(r, prev->ci, prev);
         rescheduled_rt = 0;
       }

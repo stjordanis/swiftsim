@@ -655,6 +655,7 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
   struct bpart *restrict bparts = c->black_holes.parts;
 
   TIMER_TIC;
+  celltrace(c->cellID, "running timestep");
 
   /* Anything to do here? */
   if (!cell_is_active_hydro(c, e) && !cell_is_active_gravity(c, e) &&
