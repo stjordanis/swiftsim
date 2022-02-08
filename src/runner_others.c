@@ -1077,13 +1077,11 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
 }
 
 /**
- * @brief Finish up the transport step and do the thermochemistry
- *        for radiative transfer
+ * @brief Set the RT tasks back to a re-runnable state.
  *
  * @param r The #runner thread.
  * @param c The #cell.
  * @param timer Are we timing this ?
- * @return 1 if rescheduled successfully, 0 otherwise.
  */
 int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
@@ -1098,12 +1096,10 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
   TIMER_TIC;
 
   /* We don't recurse here. We stay at the level at which this
-   * task is being called, as we're not doing any actual work. */
+   * task is being called, as we're not doing any actual work,
+   * and need to access the task pointers at the correct level. */
   int res = rt_reschedule(r, c);
-  message("cell %lld res %d", c->cellID, res);
 
-  if (timer) TIMER_TOC(timer_end_rt_reschedule);
-
+  if (timer) TIMER_TOC(timer_rt_reschedule);
   return res;
 }
-

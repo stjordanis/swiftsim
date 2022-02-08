@@ -197,7 +197,7 @@ To implement your new task in the task system, you will need to modify a
 few functions in ``engine_maketasks.c``.
 
 First, you will need to add mainly two functions: ``scheduler_addtask`` and 
-``scheduler_addunlocks`` in the ``engine_make_hierarchical_tasks_*`` functions
+``scheduler_addunlock`` in the ``engine_make_hierarchical_tasks_*`` functions
 (depending on the type of task you implement, you will need to write it to a 
 different function).
 

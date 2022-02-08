@@ -2904,6 +2904,7 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s) {
     if (c->hydro.rt_transport_out != NULL)
       scheduler_activate(s, c->hydro.rt_transport_out);
     if (c->hydro.rt_tchem != NULL) scheduler_activate(s, c->hydro.rt_tchem);
+    if (c->hydro.rt_reschedule != NULL) scheduler_activate(s, c->hydro.rt_reschedule);
     if (c->hydro.rt_out != NULL) scheduler_activate(s, c->hydro.rt_out);
   }
   return rebuild;

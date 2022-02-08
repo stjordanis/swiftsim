@@ -1829,7 +1829,8 @@ void scheduler_reweight(struct scheduler *s, int verbose) {
         break;
       case task_type_rt_reschedule:
         /* TODO Mladen: Deal with this properly later */
-        cost = 4.f * wscale * count_i + 2.f * wscale * count_i * count_i + 1.f * wscale * count_i * scount_i;
+        cost = 4.f * wscale * count_i + 2.f * wscale * count_i * count_i +
+               1.f * wscale * count_i * scount_i;
         break;
       case task_type_csds:
         cost =
@@ -1983,7 +1984,8 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
 #ifdef SWIFT_DEBUG_CHECKS
     t->ti_run = s->space->e->ti_current;
 #endif
-    t->skip = 1;
+    if (atomic_cas(&t->skip, 0, 1) != 0)
+      error("Skipping an already skipped task");
     for (int j = 0; j < t->nr_unlock_tasks; j++) {
       struct task *t2 = t->unlock_tasks[j];
       if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2);
@@ -2274,6 +2276,11 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
   /* Release whatever locks this task held. */
   if (!t->implicit) task_unlock(t);
 
+  /* Mark the task as skip. Do this before the enqueueing the next task:
+   * race conditions may appear when using rescheduling/subcycling. */
+  if (atomic_cas(&t->skip, 0, 1) != 0)
+    error("Skipping an already skipped task");
+
   /* Loop through the dependencies and add them to a queue if
      they are ready. */
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
@@ -2282,8 +2289,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
-      /* TODO MLADEN: temporary */
-      error("Negative wait! %s %d cell %lld", taskID_names[t->type], res, t2->ci->cellID);
+      error("Negative wait!");
     } else if (res == 1) {
       scheduler_enqueue(s, t2);
     }
@@ -2298,9 +2304,6 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
     pthread_cond_broadcast(&s->sleep_cond);
     pthread_mutex_unlock(&s->sleep_mutex);
   }
-
-  /* Mark the task as skip. */
-  t->skip = 1;
 
   /* Return the next best task. Note that we currently do not
      implement anything that does this, as getting it to respect

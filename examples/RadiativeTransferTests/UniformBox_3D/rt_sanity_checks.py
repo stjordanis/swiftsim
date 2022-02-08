@@ -97,7 +97,7 @@ def check_hydro_sanity(snapdata):
             # has particle been active in the meantime?
             print("- checking hydro sanity pt2.1; snapshot", snap.snapnr)
             if np.count_nonzero(mask) == npart:
-                print("--- WARNING: zero particles finished injection")
+                print("--- WARNING: zero particles done injection == 1")
             else:
                 print(
                     "--- Some photons have injection finished != 1: ",
@@ -120,7 +120,7 @@ def check_hydro_sanity(snapdata):
         if fishy.any():
             print("- checking hydro sanity pt2.2; snapshot", snap.snapnr)
             if np.count_nonzero(mask) == npart:
-                print("---WARNING: zero particles finished gradient")
+                print("---WARNING: zero particles with gradient done == 1")
             else:
                 print(
                     "--- Some gradients were finalized != 1",
@@ -143,7 +143,7 @@ def check_hydro_sanity(snapdata):
         if fishy.any():
             print("- checking hydro sanity pt2.3; snapshot", snap.snapnr)
             if np.count_nonzero(mask) == npart:
-                print("--- WARNING: zero particles finished transport")
+                print("--- WARNING: zero particles transport with transport done == 1")
             else:
                 print(
                     "--- Some transport was finalised != 1",
@@ -166,7 +166,7 @@ def check_hydro_sanity(snapdata):
         if fishy.any():
             print("- checking hydro sanity pt2.4; snapshot", snap.snapnr)
             if np.count_nonzero(mask) == npart:
-                print("--- WARNING: zero particles finished thermochemistry")
+                print("--- WARNING: zero particles with thermochemistry done == 1")
             else:
                 print(
                     "--- Some thermochemistry done != 1",

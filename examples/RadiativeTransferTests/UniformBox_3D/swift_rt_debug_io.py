@@ -50,7 +50,6 @@ class RTGasData(object):
         self.GradientsDone = None
 
         self.RadiationAbsorbedTot = None
-        self.InjectPrepCountsTot = None
 
         return
 
