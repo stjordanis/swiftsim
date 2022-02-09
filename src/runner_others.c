@@ -1099,6 +1099,6 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
    * and need to access the task pointers at the correct level. */
   int res = rt_reschedule(r, c);
 
-  if (timer) TIMER_TOC(timer_end_rt_reschedule);
+  if (timer) TIMER_TOC(timer_rt_reschedule);
   return res;
 }

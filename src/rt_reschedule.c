@@ -21,16 +21,17 @@
 
 /**
  * @file src/rt_reschedule.c
- * @brief rescheduling of RT tasks for subcycling
+ * @brief rescheduling of RT tasks for RT subcycling w.r.t. hydro/gravity.
  */
 
 /**
  * @brief Set a task that has been run to a state where it can
- * run again
- * TODO: docs
+ * run (ie enqueued) again.
+ * @param e the #engine
+ * @param t the #task to re-schedule
+ * @param wait number of dependencies to set for this task.
  */
 void rt_reschedule_task(struct engine *e, struct task *t, int wait) {
-  /* TODO: remove cell parameter later . possibly engine too? */
 
   if (t == NULL) return;
 
@@ -52,11 +53,11 @@ void rt_reschedule_task(struct engine *e, struct task *t, int wait) {
 }
 
 /**
- * @brief Re-schedule the entire RT cycle (that does actual work)
+ * @brief Re-schedule the entire RT cycle (that does the actual work)
  * for the given cell.
  * @param r The #runner thread.
- * @param c The #cell.
- * @return 1 if done, 0 if not.
+ * @param c The #cell whose tasks we're re-scheduling.
+ * @return 1 if we rescheduled, 0 if not.
  */
 int rt_reschedule(struct runner *r, struct cell *c) {
   struct engine *e = r->e;
@@ -67,11 +68,15 @@ int rt_reschedule(struct runner *r, struct cell *c) {
 
   if (c->hydro.rt_cycle > RT_RESCHEDULE_MAX) {
     error("trying to subcycle too much?");
-  } else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
+  } 
+  else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
+
     /* We're done with the subcycling. */
     c->hydro.rt_cycle = 0;
     return 0;
-  } else {
+  } 
+  else {
+
     /* Set all RT tasks that do actual work back to a re-queueable state. */
 
     struct task *rt_transport_out = c->hydro.rt_transport_out;
@@ -81,7 +86,7 @@ int rt_reschedule(struct runner *r, struct cell *c) {
     rt_reschedule_task(e, rt_tchem, /*wait =*/1);
 
     /* Make sure we don't fully unlock the dependency that follows
-     * after the rt_reschedule task */
+     * after the rt_reschedule task: block the implicit rt_out */
     struct task *rt_out = c->hydro.rt_out;
     atomic_inc(&rt_out->wait);
 
@@ -92,8 +97,8 @@ int rt_reschedule(struct runner *r, struct cell *c) {
 /**
  * @brief Enqueue the RT task at the top of the hierarchy, and re-schedule
  * the rescheduler task itself.
- * @param r The #runner thread.
- * @param c The #cell.
+ * @param e The #engine
+ * @param c The #cell whose task we're re-queueing.
  */
 int rt_requeue(struct engine *e, struct cell *c) {
   if (!e->subcycle_rt) return 0;
