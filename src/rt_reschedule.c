@@ -70,39 +70,44 @@ int rt_reschedule(struct runner *r, struct cell *c) {
 
   if (c->hydro.rt_cycle > RT_RESCHEDULE_MAX) {
     error("trying to subcycle too much?");
-  } else {
+  } 
+  /* else { */
     /* Conditionally re-schedule the requeue task. On the first cycle
      * (before the first re-cycle), the task should be unskipped already.
      * We need to do this too even if we're at the final cycle. */
-    struct task *rt_requeue = c->hydro.rt_requeue;
-    if (rt_requeue->skip == 1) {
-      rt_reschedule_task(e, rt_requeue, c, /*wait =*/1, /*callloc=*/6);
-    } else {
-      if (c->hydro.rt_cycle != 1)
-        error("Requeue not skipped cell %lld cycle %d skip %d | %d", c->cellID,
-              c->hydro.rt_cycle, rt_requeue->skip, c->hydro.parts[0].rt_data.debug_thermochem_done);
-    }
+    /* struct task *rt_requeue = c->hydro.rt_requeue; */
+    /* if (rt_requeue->skip == 1) { */
+      /* rt_reschedule_task(e, rt_requeue, c, wait =1, callloc=6); */
+    /* } else { */
+    /*   if (c->hydro.rt_cycle != 1) */
+    /*     error("Requeue not skipped cell %lld cycle %d skip %d | %d", c->cellID, */
+    /*           c->hydro.rt_cycle, rt_requeue->skip, c->hydro.parts[0].rt_data.debug_thermochem_done); */
+    /* } */
 
-    if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
-      /* We're done with the subcycling. */
-      /* message("cell %lld at cycle %d - not rescheduling", c->cellID,
-       * c->hydro.rt_cycle); */
-      celltrace(c->cellID, "cycle %d - not rescheduling", c->hydro.rt_cycle);
-      /* Reset and stop the rescheduling. */
-      c->hydro.rt_cycle = 0;
-      return 0;
-    } else {
-      /* Set all RT tasks that do actual work back to a re-queueable state. */
+  else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
+    /* We're done with the subcycling. */
 
-      struct task *rt_transport_out = c->hydro.rt_transport_out;
-      rt_reschedule_task(e, rt_transport_out, c, /*wait =*/0, /*callloc=*/1);
+    celltrace(c->cellID, "cycle %d - not rescheduling", c->hydro.rt_cycle);
+    /* Reset and stop the rescheduling. */
+    c->hydro.rt_cycle = 0;
+    return 0;
+  } 
+  else {
+    /* Set all RT tasks that do actual work back to a re-queueable state. */
 
-      struct task *rt_tchem = c->hydro.rt_tchem;
-      rt_reschedule_task(e, rt_tchem, c, /*wait =*/1, /*callloc=*/1);
+    struct task *rt_transport_out = c->hydro.rt_transport_out;
+    rt_reschedule_task(e, rt_transport_out, c, /*wait =*/0, /*callloc=*/1);
 
-      celltrace(c->cellID, "cycle %d - rescheduled tasks", c->hydro.rt_cycle - 1);
-      return 1;
-    }
+    struct task *rt_tchem = c->hydro.rt_tchem;
+    rt_reschedule_task(e, rt_tchem, c, /*wait =*/1, /*callloc=*/1);
+
+    /* Make sure we don't fully unlock the dependency that follows
+     * after the rt_reschedule task */
+    struct task *rt_out = c->hydro.rt_out;
+    atomic_inc(&rt_out->wait);
+
+    celltrace(c->cellID, "cycle %d - rescheduled tasks", c->hydro.rt_cycle - 1);
+    return 1;
   }
 
   error("You shouldn't be here, yo");
@@ -114,8 +119,9 @@ int rt_reschedule(struct runner *r, struct cell *c) {
  * @param r The #runner thread.
  * @param c The #cell.
  */
-int rt_requeue(struct runner *r, struct cell *c) {
-  struct engine *e = r->e;
+int rt_requeue(struct engine *e, struct cell *c) {
+/* int rt_requeue(struct runner *r, struct cell *c) { */
+  /* struct engine *e = r->e; */
   if (!e->subcycle_rt) return 0;
 
   /* rt_cycle is == 0 only if we're done subcycling. It would've
@@ -125,13 +131,7 @@ int rt_requeue(struct runner *r, struct cell *c) {
   /* Re-schedule the rescheduler task. */
   struct task *rt_reschedule = c->hydro.rt_reschedule;
   rt_reschedule_task(e, rt_reschedule, c, /*wait =*/1, /*callloc=*/5);
-  /* message("Rescheduled the rescheduler cell %lld", c->cellID); */
   celltrace(c->cellID, "Rescheduled the rescheduler");
-
-  /* Make sure we don't fully unlock the dependency that follows
-   * after the rt_requeue task */
-  struct task *rt_out = c->hydro.rt_out;
-  atomic_inc(&rt_out->wait);
 
   /* Finally, enqueue the RT task at the top of the hierarchy. */
   struct task *rt_transport_out = c->hydro.rt_transport_out;

@@ -36,7 +36,7 @@
 
 void rt_reschedule_task(struct engine *e, struct task *t, struct cell *c,
                         int wait, int callloc);
-int rt_requeue(struct runner *r, struct cell *c);
+int rt_requeue(struct engine *e, struct cell *c);
 int rt_reschedule(struct runner *r, struct cell *c);
 
 #endif /* defined SWIFT_RT_RESCHEDULE_H */

@@ -177,6 +177,7 @@ void *runner_main(void *data) {
   struct engine *e = r->e;
   struct scheduler *sched = &e->sched;
   unsigned int seed = r->id;
+  int rt_rescheduled = 0;
   pthread_setspecific(sched->local_seed_pointer, &seed);
   /* Main loop. */
   while (1) {
@@ -622,10 +623,11 @@ void *runner_main(void *data) {
           runner_do_rt_tchem(r, t->ci, 1);
           break;
         case task_type_rt_reschedule:
-          runner_do_rt_reschedule(r, t->ci, 1);
+          rt_rescheduled = runner_do_rt_reschedule(r, t->ci, 1);
           break;
         case task_type_rt_requeue:
-          runner_do_rt_requeue(r, t->ci, 1);
+          error("WUT?");
+          /* rt_rescheduled = runner_do_rt_requeue(r, t->ci, 1); */
           break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
@@ -650,6 +652,11 @@ void *runner_main(void *data) {
       /* We're done with this task, see if we get a next one. */
       prev = t;
       t = scheduler_done(sched, t);
+      if (rt_rescheduled) {
+        if (prev->type != task_type_rt_reschedule) error("Wrong task type for reschedule?");
+        rt_requeue(e, prev->ci);
+        rt_rescheduled = 0;
+      }
 
     } /* main loop. */
   }

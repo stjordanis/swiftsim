@@ -1084,24 +1084,25 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
  * @param c The #cell.
  * @param timer Are we timing this ?
  */
-void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
+int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
   const struct engine *e = r->e;
   const int count = c->hydro.count;
 
   /* Anything to do here? */
-  if (!e->subcycle_rt) return;
-  if (count == 0) return;
-  if (!cell_is_active_hydro(c, e)) return;
+  if (!e->subcycle_rt) return 0;
+  if (count == 0) return 0;
+  if (!cell_is_active_hydro(c, e)) return 0;
 
   TIMER_TIC;
 
   /* We don't recurse here. We stay at the level at which this
    * task is being called, as we're not doing any actual work,
    * and need to access the task pointers at the correct level. */
-  rt_reschedule(r, c);
+  int res = rt_reschedule(r, c);
 
   if (timer) TIMER_TOC(timer_end_rt_reschedule);
+  return res;
 }
 
 /**
@@ -1111,21 +1112,22 @@ void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
  * @param c The #cell.
  * @param timer Are we timing this ?
  */
-void runner_do_rt_requeue(struct runner *r, struct cell *c, int timer) {
+int runner_do_rt_requeue(struct runner *r, struct cell *c, int timer) {
 
   const struct engine *e = r->e;
   const int count = c->hydro.count;
 
   /* Anything to do here? */
-  if (!e->subcycle_rt) return;
-  if (count == 0) return;
-  if (!cell_is_active_hydro(c, e)) return;
+  if (!e->subcycle_rt) return 0 ;
+  if (count == 0) return 0;
+  if (!cell_is_active_hydro(c, e)) return 0;
 
   TIMER_TIC;
 
   /* We don't recurse here. We stay at the level at which this
    * task is being called, as we're not doing any actual work. */
-  rt_requeue(r, c);
+  /* rt_requeue(r, c); */
 
   if (timer) TIMER_TOC(timer_end_rt_requeue);
+  return c->hydro.rt_cycle;
 }
