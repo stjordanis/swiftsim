@@ -1022,8 +1022,6 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
   if (count == 0) return;
   if (!cell_is_active_hydro(c, e)) return;
 
-  celltrace(c->cellID, "running rt_tchem cycle %d", c->hydro.rt_cycle);
-
   TIMER_TIC;
 
   /* Recurse? */
@@ -1103,31 +1101,4 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
   if (timer) TIMER_TOC(timer_end_rt_reschedule);
   return res;
-}
-
-/**
- * @brief Re-enqueue the RT tasks.
- *
- * @param r The #runner thread.
- * @param c The #cell.
- * @param timer Are we timing this ?
- */
-int runner_do_rt_requeue(struct runner *r, struct cell *c, int timer) {
-
-  const struct engine *e = r->e;
-  const int count = c->hydro.count;
-
-  /* Anything to do here? */
-  if (!e->subcycle_rt) return 0 ;
-  if (count == 0) return 0;
-  if (!cell_is_active_hydro(c, e)) return 0;
-
-  TIMER_TIC;
-
-  /* We don't recurse here. We stay at the level at which this
-   * task is being called, as we're not doing any actual work. */
-  /* rt_requeue(r, c); */
-
-  if (timer) TIMER_TOC(timer_end_rt_requeue);
-  return c->hydro.rt_cycle;
 }

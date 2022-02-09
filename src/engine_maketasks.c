@@ -1511,15 +1511,9 @@ void engine_make_hierarchical_tasks_hydro(struct engine *e, struct cell *c,
         /* re-scheduler task */
         c->hydro.rt_reschedule = scheduler_addtask(
             s, task_type_rt_reschedule, task_subtype_none, 0, 0, c, NULL);
-        /* re-queuer task */
-        /* c->hydro.rt_requeue = scheduler_addtask( */
-        /*     s, task_type_rt_requeue, task_subtype_none, 0, 0, c, NULL); */
 
         scheduler_addunlock(s, c->hydro.rt_transport_out, c->hydro.rt_tchem);
-        /* TODO: the dependency order is for testing only */
         scheduler_addunlock(s, c->hydro.rt_tchem, c->hydro.rt_reschedule);
-        /* scheduler_addunlock(s, c->hydro.rt_reschedule, c->hydro.rt_requeue); */
-        /* scheduler_addunlock(s, c->hydro.rt_requeue, c->hydro.rt_out); */
         scheduler_addunlock(s, c->hydro.rt_reschedule, c->hydro.rt_out);
       }
 

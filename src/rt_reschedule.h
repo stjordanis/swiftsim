@@ -34,8 +34,7 @@
 /* TODO: temporary for dev */
 #define RT_RESCHEDULE_MAX 10
 
-void rt_reschedule_task(struct engine *e, struct task *t, struct cell *c,
-                        int wait, int callloc);
+void rt_reschedule_task(struct engine *e, struct task *t, int wait);
 int rt_requeue(struct engine *e, struct cell *c);
 int rt_reschedule(struct runner *r, struct cell *c);
 

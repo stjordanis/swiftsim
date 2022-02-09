@@ -1840,11 +1840,6 @@ void scheduler_reweight(struct scheduler *s, int verbose) {
         cost = 4.f * wscale * count_i + 2.f * wscale * count_i * count_i +
                1.f * wscale * count_i * scount_i;
         break;
-      case task_type_rt_requeue:
-        /* TODO Mladen: Deal with this properly later */
-        cost = 4.f * wscale * count_i + 2.f * wscale * count_i * count_i +
-               1.f * wscale * count_i * scount_i;
-        break;
       case task_type_csds:
         cost =
             wscale * (count_i + gcount_i + scount_i + sink_count_i + bcount_i);
@@ -1941,7 +1936,7 @@ void scheduler_enqueue_mapper(void *map_data, int num_elements,
   for (int ind = 0; ind < num_elements; ind++) {
     struct task *t = &tasks[tid[ind]];
     if (atomic_dec(&t->wait) == 1 && !t->skip) {
-      scheduler_enqueue(s, t, 3);
+      scheduler_enqueue(s, t);
     }
   }
   pthread_cond_broadcast(&s->sleep_cond);
@@ -1985,7 +1980,7 @@ void scheduler_start(struct scheduler *s) {
  * @param s The #scheduler.
  * @param t The #task.
  */
-void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
+void scheduler_enqueue(struct scheduler *s, struct task *t) {
   /* The target queue for this task. */
   int qid = -1;
 
@@ -1997,11 +1992,11 @@ void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
 #ifdef SWIFT_DEBUG_CHECKS
     t->ti_run = s->space->e->ti_current;
 #endif
-    if (atomic_cas(&t->skip, 0, 1) != 0) 
+    if (atomic_cas(&t->skip, 0, 1) != 0)
       error("Skipping an already skipped task");
     for (int j = 0; j < t->nr_unlock_tasks; j++) {
       struct task *t2 = t->unlock_tasks[j];
-      if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2, callloc - 100);
+      if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2);
     }
   }
 
@@ -2269,31 +2264,6 @@ void scheduler_enqueue(struct scheduler *s, struct task *t, int callloc) {
 
     /* Insert the task into that queue. */
     queue_insert(&s->queues[qid], t);
-
-    if (t->type == task_type_rt_tchem)
-      celltrace(t->ci->cellID,
-                "inserted rt_tchem into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
-    if (t->type == task_type_rt_reschedule)
-      celltrace(t->ci->cellID,
-                "inserted rt_reschedule into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
-    if (t->type == task_type_rt_requeue)
-      celltrace(t->ci->cellID,
-                "inserted rt_requeue into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
-    if (t->type == task_type_rt_out)
-      celltrace(t->ci->cellID,
-                "inserted rt_out into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
-    if (t->type == task_type_rt_transport_out)
-      celltrace(t->ci->cellID,
-                "inserted rt_transport_out into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
-    if (t->type == task_type_timestep)
-      celltrace(t->ci->cellID,
-                "inserted timestep into queue, cycle %d, callloc=%d",
-                t->ci->hydro.rt_cycle, callloc);
   }
 }
 
@@ -2327,7 +2297,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
       error("Negative wait! %s %d cell %lld", taskID_names[t->type], res,
             t2->ci->cellID);
     } else if (res == 1) {
-      scheduler_enqueue(s, t2, 1);
+      scheduler_enqueue(s, t2);
     }
   }
 
@@ -2365,7 +2335,7 @@ struct task *scheduler_unlock(struct scheduler *s, struct task *t) {
     if (res < 1) {
       error("Negative wait!");
     } else if (res == 1) {
-      scheduler_enqueue(s, t2, 2);
+      scheduler_enqueue(s, t2);
     }
   }
 

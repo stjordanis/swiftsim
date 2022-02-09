@@ -45,6 +45,7 @@ Stars:
 
 Scheduler:
   max_top_level_cells: 64
+  enable_rt_subcycling:       1
 
 Restarts:
   delta_hours:        72        # (Optional) decimal hours between dumps of restart files.

@@ -139,9 +139,6 @@ struct cell_hydro {
     /*! Radiative transfer rescheduler task */
     struct task *rt_reschedule;
 
-    /*! Radiative transfer requeuer task */
-    struct task *rt_requeue;
-
     /*! Last (integer) time the cell's part were drifted forward in time. */
     integertime_t ti_old_part;
 

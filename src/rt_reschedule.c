@@ -29,28 +29,26 @@
  * run again
  * TODO: docs
  */
-void rt_reschedule_task(struct engine *e, struct task *t, struct cell *c,
-                        int wait, int callloc) {
+void rt_reschedule_task(struct engine *e, struct task *t, int wait) {
   /* TODO: remove cell parameter later . possibly engine too? */
 
   if (t == NULL) return;
 
-  if (t->wait != 0)
-    message(
-        "Got t->wait = %d? Should be zero when rescheduling %s, callloc %d "
-        "cellID %lld",
-        t->wait, taskID_names[t->type], callloc, c->cellID);
+#ifdef SWIFT_DEBUGGING_CHECKS
+  long long cellID = t->ci->cellID;
+#else
+  long long cellID = -1;
+#endif
+
   int w, s;
   if ((w = atomic_cas(&t->wait, 0, wait)) != 0)
-    error(
-        "Got t->wait = %d? Should be zero when rescheduling %s, callloc %d "
-        "cellID %lld",
-        w, taskID_names[t->type], callloc, c->cellID);
+    error("Got t->wait = %d? Should be zero when rescheduling %s cellID %lld",
+          w, taskID_names[t->type], cellID);
   if ((s = atomic_cas(&t->skip, 1, 0)) != 1)
     error(
-        "ERROR - Trying to reschedule a task with skip = %d; Should be 1 when "
+        "Trying to reschedule a task with skip = %d; Should be 1 when "
         "rescheduling ; task %s cell %lld cycle %d",
-        s, taskID_names[t->type], t->ci->cellID, t->ci->hydro.rt_cycle);
+        s, taskID_names[t->type], cellID, t->ci->hydro.rt_cycle);
 }
 
 /**
@@ -66,51 +64,29 @@ int rt_reschedule(struct runner *r, struct cell *c) {
 
   /* increment the counter */
   c->hydro.rt_cycle += 1;
-  celltrace(c->cellID, "running rt_reschedule cycle %d", c->hydro.rt_cycle-1);
 
   if (c->hydro.rt_cycle > RT_RESCHEDULE_MAX) {
     error("trying to subcycle too much?");
-  } 
-  /* else { */
-    /* Conditionally re-schedule the requeue task. On the first cycle
-     * (before the first re-cycle), the task should be unskipped already.
-     * We need to do this too even if we're at the final cycle. */
-    /* struct task *rt_requeue = c->hydro.rt_requeue; */
-    /* if (rt_requeue->skip == 1) { */
-      /* rt_reschedule_task(e, rt_requeue, c, wait =1, callloc=6); */
-    /* } else { */
-    /*   if (c->hydro.rt_cycle != 1) */
-    /*     error("Requeue not skipped cell %lld cycle %d skip %d | %d", c->cellID, */
-    /*           c->hydro.rt_cycle, rt_requeue->skip, c->hydro.parts[0].rt_data.debug_thermochem_done); */
-    /* } */
-
-  else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
+  } else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
     /* We're done with the subcycling. */
-
-    celltrace(c->cellID, "cycle %d - not rescheduling", c->hydro.rt_cycle);
-    /* Reset and stop the rescheduling. */
     c->hydro.rt_cycle = 0;
     return 0;
-  } 
-  else {
+  } else {
     /* Set all RT tasks that do actual work back to a re-queueable state. */
 
     struct task *rt_transport_out = c->hydro.rt_transport_out;
-    rt_reschedule_task(e, rt_transport_out, c, /*wait =*/0, /*callloc=*/1);
+    rt_reschedule_task(e, rt_transport_out, /*wait =*/0);
 
     struct task *rt_tchem = c->hydro.rt_tchem;
-    rt_reschedule_task(e, rt_tchem, c, /*wait =*/1, /*callloc=*/1);
+    rt_reschedule_task(e, rt_tchem, /*wait =*/1);
 
     /* Make sure we don't fully unlock the dependency that follows
      * after the rt_reschedule task */
     struct task *rt_out = c->hydro.rt_out;
     atomic_inc(&rt_out->wait);
 
-    celltrace(c->cellID, "cycle %d - rescheduled tasks", c->hydro.rt_cycle - 1);
     return 1;
   }
-
-  error("You shouldn't be here, yo");
 }
 
 /**
@@ -120,8 +96,6 @@ int rt_reschedule(struct runner *r, struct cell *c) {
  * @param c The #cell.
  */
 int rt_requeue(struct engine *e, struct cell *c) {
-/* int rt_requeue(struct runner *r, struct cell *c) { */
-  /* struct engine *e = r->e; */
   if (!e->subcycle_rt) return 0;
 
   /* rt_cycle is == 0 only if we're done subcycling. It would've
@@ -130,13 +104,11 @@ int rt_requeue(struct engine *e, struct cell *c) {
 
   /* Re-schedule the rescheduler task. */
   struct task *rt_reschedule = c->hydro.rt_reschedule;
-  rt_reschedule_task(e, rt_reschedule, c, /*wait =*/1, /*callloc=*/5);
-  celltrace(c->cellID, "Rescheduled the rescheduler");
+  rt_reschedule_task(e, rt_reschedule, /*wait =*/1);
 
   /* Finally, enqueue the RT task at the top of the hierarchy. */
   struct task *rt_transport_out = c->hydro.rt_transport_out;
-  celltrace(c->cellID, "cycle %d - requeueing", c->hydro.rt_cycle);
-  scheduler_enqueue(&e->sched, rt_transport_out, 4);
+  scheduler_enqueue(&e->sched, rt_transport_out);
 
   return 1;
 }

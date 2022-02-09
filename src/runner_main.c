@@ -625,10 +625,6 @@ void *runner_main(void *data) {
         case task_type_rt_reschedule:
           rt_rescheduled = runner_do_rt_reschedule(r, t->ci, 1);
           break;
-        case task_type_rt_requeue:
-          error("WUT?");
-          /* rt_rescheduled = runner_do_rt_requeue(r, t->ci, 1); */
-          break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
       }
@@ -653,11 +649,13 @@ void *runner_main(void *data) {
       prev = t;
       t = scheduler_done(sched, t);
       if (rt_rescheduled) {
-        if (prev->type != task_type_rt_reschedule) error("Wrong task type for reschedule?");
+#ifdef SWIFT_DEBUG_CHECKS
+        if (prev->type != task_type_rt_reschedule)
+          error("Wrong task type for reschedule?");
+#endif
         rt_requeue(e, prev->ci);
         rt_rescheduled = 0;
       }
-
     } /* main loop. */
   }
 
