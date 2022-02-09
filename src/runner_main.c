@@ -33,9 +33,9 @@
 /* Local headers. */
 #include "engine.h"
 #include "feedback.h"
+#include "rt_reschedule.h"
 #include "scheduler.h"
 #include "space_getsid.h"
-#include "rt_reschedule.h"
 #include "timers.h"
 
 /* Import the gravity loop functions. */
@@ -178,7 +178,6 @@ void *runner_main(void *data) {
   struct scheduler *sched = &e->sched;
   unsigned int seed = r->id;
   pthread_setspecific(sched->local_seed_pointer, &seed);
-  int rescheduled_rt = 0;
   /* Main loop. */
   while (1) {
 
@@ -615,18 +614,18 @@ void *runner_main(void *data) {
           break;
         case task_type_rt_ghost1:
           runner_do_rt_ghost1(r, t->ci, 1);
-          /* message("ran rt_ghost1. cell=%lld, Cycle = %d", t->ci->cellID, t->ci->hydro.rt_cycle); */
           break;
         case task_type_rt_ghost2:
           runner_do_rt_ghost2(r, t->ci, 1);
           break;
         case task_type_rt_tchem:
           runner_do_rt_tchem(r, t->ci, 1);
-          celltrace(t->ci->cellID, "ran tchem. Cycle = %d", t->ci->hydro.rt_cycle);
-          /* message("ran tchem. cell=%lld, Cycle = %d", t->ci->cellID, t->ci->hydro.rt_cycle); */
           break;
         case task_type_rt_reschedule:
-          rescheduled_rt = runner_do_rt_reschedule(r, t->ci, 1);
+          runner_do_rt_reschedule(r, t->ci, 1);
+          break;
+        case task_type_rt_requeue:
+          runner_do_rt_requeue(r, t->ci, 1);
           break;
         default:
           error("Unknown/invalid task type (%d).", t->type);
@@ -651,15 +650,6 @@ void *runner_main(void *data) {
       /* We're done with this task, see if we get a next one. */
       prev = t;
       t = scheduler_done(sched, t);
-
-      if (rescheduled_rt) {
-        /* can only be the case if RT was rescheduled successfully
-         * in this iteration */
-        if (prev->type != task_type_rt_reschedule) error("prev is wrong task type");
-        celltrace(prev->ci->cellID, "calling reschedule rescheduler; cycle %d", prev->ci->hydro.rt_cycle);
-        rt_reschedule_rescheduler(r, prev->ci, prev);
-        rescheduled_rt = 0;
-      }
 
     } /* main loop. */
   }

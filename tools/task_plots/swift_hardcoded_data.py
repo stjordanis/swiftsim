@@ -79,6 +79,8 @@ TASKTYPES = [
     "rt_ghost2",
     "rt_transport_out",
     "rt_tchem",
+    "rt_reschedule",
+    "rt_requeue",
     #  "count",
 ]
 

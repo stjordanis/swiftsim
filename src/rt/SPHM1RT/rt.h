@@ -381,18 +381,19 @@ __attribute__((always_inline)) INLINE static void rt_convert_quantities(
     const struct unit_system* restrict us,
     const struct cosmology* restrict cosmo) {}
 
-  struct rt_part_data* rpd = &p->rt_data;
-  /* Note that in the input, we read radiation energy and flux
-   * then we convert these quantities to radiation energy per mass and flux per
-   * mass
-   */
-  for (int g = 0; g < RT_NGROUPS; g++) {
-    rpd->conserved[g].urad = rpd->conserved[g].urad / p->mass;
-    rpd->conserved[g].frad[0] = rpd->conserved[g].frad[0] / p->mass;
-    rpd->conserved[g].frad[1] = rpd->conserved[g].frad[1] / p->mass;
-    rpd->conserved[g].frad[2] = rpd->conserved[g].frad[2] / p->mass;
-  }
-};
+struct rt_part_data* rpd = &p->rt_data;
+/* Note that in the input, we read radiation energy and flux
+ * then we convert these quantities to radiation energy per mass and flux per
+ * mass
+ */
+for (int g = 0; g < RT_NGROUPS; g++) {
+  rpd->conserved[g].urad = rpd->conserved[g].urad / p->mass;
+  rpd->conserved[g].frad[0] = rpd->conserved[g].frad[0] / p->mass;
+  rpd->conserved[g].frad[1] = rpd->conserved[g].frad[1] / p->mass;
+  rpd->conserved[g].frad[2] = rpd->conserved[g].frad[2] / p->mass;
+}
+}
+;
 
 /**
  * @brief Computes the next radiative transfer time step size

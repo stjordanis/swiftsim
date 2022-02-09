@@ -131,12 +131,12 @@ extern int engine_rank;
   })
 #endif
 
-#define celltrace(cellID, s, ...)                                       \
-  ({if (cellID == 365ll)                                                  \
-    printf("%s %s: CELL %lld; " s "\n", clocks_get_timesincestart(), __FUNCTION__, cellID, \
-           ##__VA_ARGS__);                                              \
+#define celltrace(cellID, s, ...)                                      \
+  ({                                                                   \
+    if (cellID == 365ll)                                               \
+      printf("%s %s: CELL %lld; " s "\n", clocks_get_timesincestart(), \
+             __FUNCTION__, cellID, ##__VA_ARGS__);                     \
   })
-
 
 /**
  * @brief Macro to print a localized warning message with variable arguments.

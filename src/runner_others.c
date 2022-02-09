@@ -1022,7 +1022,7 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
   if (count == 0) return;
   if (!cell_is_active_hydro(c, e)) return;
 
-  celltrace(c->cellID, "running tchem cycle %d", c->hydro.rt_cycle);
+  celltrace(c->cellID, "running rt_tchem cycle %d", c->hydro.rt_cycle);
 
   TIMER_TIC;
 
@@ -1078,34 +1078,54 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
 }
 
 /**
- * @brief Finish up the transport step and do the thermochemistry
- *        for radiative transfer
+ * @brief Set the RT tasks back to a re-runnable state.
  *
  * @param r The #runner thread.
  * @param c The #cell.
  * @param timer Are we timing this ?
- * @return 1 if rescheduled successfully, 0 otherwise.
  */
-int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
+void runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer) {
 
   const struct engine *e = r->e;
   const int count = c->hydro.count;
 
   /* Anything to do here? */
-  if (!e->subcycle_rt) return 0;
-  if (count == 0) return 0;
-  if (!cell_is_active_hydro(c, e)) return 0;
+  if (!e->subcycle_rt) return;
+  if (count == 0) return;
+  if (!cell_is_active_hydro(c, e)) return;
+
+  TIMER_TIC;
+
+  /* We don't recurse here. We stay at the level at which this
+   * task is being called, as we're not doing any actual work,
+   * and need to access the task pointers at the correct level. */
+  rt_reschedule(r, c);
+
+  if (timer) TIMER_TOC(timer_end_rt_reschedule);
+}
+
+/**
+ * @brief Re-enqueue the RT tasks.
+ *
+ * @param r The #runner thread.
+ * @param c The #cell.
+ * @param timer Are we timing this ?
+ */
+void runner_do_rt_requeue(struct runner *r, struct cell *c, int timer) {
+
+  const struct engine *e = r->e;
+  const int count = c->hydro.count;
+
+  /* Anything to do here? */
+  if (!e->subcycle_rt) return;
+  if (count == 0) return;
+  if (!cell_is_active_hydro(c, e)) return;
 
   TIMER_TIC;
 
   /* We don't recurse here. We stay at the level at which this
    * task is being called, as we're not doing any actual work. */
-  int res = rt_reschedule(r, c);
-  /* message("cell %lld cycle %d rescheduled? %d", c->cellID, c->hydro.rt_cycle, res); */
-  celltrace(c->cellID, "cycle %d rescheduled? %d", c->hydro.rt_cycle, res);
+  rt_requeue(r, c);
 
-  if (timer) TIMER_TOC(timer_end_rt_reschedule);
-
-  return res;
+  if (timer) TIMER_TOC(timer_end_rt_requeue);
 }
-

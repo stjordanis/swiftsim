@@ -122,6 +122,7 @@ const char *taskID_names[task_type_count] = {
     "rt_transport_out",
     "rt_tchem",
     "rt_reschedule",
+    "rt_requeue",
 };
 
 /* Sub-task type names. */

@@ -141,6 +141,7 @@ const char* timers_names[timer_count] = {
     "dosub_pair_rt_transport",
     "rt_tchem",
     "rt_reschedule",
+    "rt_requeue",
 };
 
 /* File to store the timers */

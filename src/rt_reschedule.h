@@ -20,6 +20,12 @@
 #ifndef SWIFT_RT_RESCHEDULE_H
 #define SWIFT_RT_RESCHEDULE_H
 
+#include "cell.h"
+#include "engine.h"
+#include "runner.h"
+#include "scheduler.h"
+#include "task.h"
+
 /**
  * @file src/rt_reschedule.h
  * @brief Main header file for the rescheduling of RT tasks
@@ -28,8 +34,9 @@
 /* TODO: temporary for dev */
 #define RT_RESCHEDULE_MAX 10
 
-void rt_reschedule_task(struct engine* e, struct task *t, struct cell* c, int wait, int callloc);
-void rt_reschedule_rescheduler(struct runner *r, struct cell *c, struct task *rescheduler_task);
+void rt_reschedule_task(struct engine *e, struct task *t, struct cell *c,
+                        int wait, int callloc);
+int rt_requeue(struct runner *r, struct cell *c);
 int rt_reschedule(struct runner *r, struct cell *c);
 
 #endif /* defined SWIFT_RT_RESCHEDULE_H */

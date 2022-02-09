@@ -141,6 +141,7 @@ enum {
   timer_dosub_pair_rt_transport,
   timer_do_rt_tchem,
   timer_do_rt_reschedule,
+  timer_do_rt_requeue,
   timer_count,
 };
 
