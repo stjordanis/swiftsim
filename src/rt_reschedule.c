@@ -68,14 +68,12 @@ int rt_reschedule(struct runner *r, struct cell *c) {
 
   if (c->hydro.rt_cycle > RT_RESCHEDULE_MAX) {
     error("trying to subcycle too much?");
-  } 
-  else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
+  } else if (c->hydro.rt_cycle == RT_RESCHEDULE_MAX) {
 
     /* We're done with the subcycling. */
     c->hydro.rt_cycle = 0;
     return 0;
-  } 
-  else {
+  } else {
 
     /* Set all RT tasks that do actual work back to a re-queueable state. */
 
