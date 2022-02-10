@@ -819,15 +819,17 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
   p->sum_rij_over_rho[1] *= h_inv_dim;
   p->sum_rij_over_rho[2] *= h_inv_dim;
   
-  //p->I =(p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho;
+  p->I =(p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho;
+  //p->I /=  p->sum_wij_over_rho;  
     
     
+  //p->I =sqrt(p->sum_rij_over_rho[0]*p->sum_rij_over_rho[0] + p->sum_rij_over_rho[1]*p->sum_rij_over_rho[1] + p->sum_rij_over_rho[2]*p->sum_rij_over_rho[2]);  
   //p->I /=  p->sum_wij_over_rho;
+    //p->I /= p->h; 
     
-    
-  p->I =1.f/(1.f/(p->sum_wij_over_rho)  -  (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / (p->sum_wij_over_rho * p->rho)) - 1.f;
+  //p->I =1.f/(1.f/(p->sum_wij_over_rho)  -  (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / (p->sum_wij_over_rho * p->rho)) - 1.f;
 
-  p->I = 8.3*fabs(p->I);
+  p->I = 20.f*fabs(p->I);//8.3*fabs(p->I);
 
 
 
@@ -850,14 +852,24 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
 	  
 	  
 	  float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_P;
-
     
-	  float T_new = p->T;//expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
-          
+	  //float T_new = expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
 	  
-	  float rho_new =
-	      gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
-   
+          //float rho_new =
+	      //gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
+          
+          float T_new
+          
+          // iterate a few times
+          float rho_new = p->rho;
+          for(i=0;i<3;i++){
+          	T_new = gas_temperature_from_internal_energy(rho_new, p->u, p->mat_id);
+          	rho_new = gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
+          } 
+	  
+	  
+	      
+	      
 	  
 	  if (rho_new < rho_min){
 	    p->rho = rho_min;
