@@ -49,6 +49,7 @@
 #include "memuse.h"
 #include "mpiuse.h"
 #include "queue.h"
+#include "rt_reschedule.h"
 #include "sort_part.h"
 #include "space.h"
 #include "space_getsid.h"
@@ -1259,6 +1260,7 @@ struct task *scheduler_addtask(struct scheduler *s, enum task_types type,
   t->subtype = subtype;
   t->flags = flags;
   t->wait = 0;
+  t->rt_subcycle_wait = -1; /* To be safe, keep this negative. Only RT tasks will be set properly. */
   t->ci = ci;
   t->cj = cj;
   t->skip = 1; /* Mark tasks as skip by default. */
@@ -1329,6 +1331,7 @@ void scheduler_set_unlocks(struct scheduler *s) {
   }
 
   /* Create and fill a temporary array with the sorted unlocks. */
+  /* This puts all the unlocks of each task next to each other in the array. */
   struct task **unlocks;
   if ((unlocks = (struct task **)swift_malloc(
            "unlocks", sizeof(struct task *) * s->size_unlocks)) == NULL)
@@ -1949,6 +1952,15 @@ void scheduler_start(struct scheduler *s) {
     scheduler_rewait_mapper(s->tid_active, s->active_count, s);
   }
 
+  if (s->space->e->subcycle_rt){
+    if (s->active_count > 1000) {
+    threadpool_map(s->threadpool, rt_subcycle_rewait_mapper, s->tid_active,
+                   s->active_count, sizeof(int), threadpool_auto_chunk_size, s);
+    } else {
+      rt_subcycle_rewait_mapper(s->tid_active, s->active_count, s);
+    }
+  }
+
   /* Loop over the tasks and enqueue whoever is ready. */
   if (s->active_count > 1000) {
     threadpool_map(s->threadpool, scheduler_enqueue_mapper, s->tid_active,
@@ -1964,6 +1976,22 @@ void scheduler_start(struct scheduler *s) {
   pthread_mutex_lock(&s->sleep_mutex);
   pthread_cond_broadcast(&s->sleep_cond);
   pthread_mutex_unlock(&s->sleep_mutex);
+}
+
+/**
+ * @brief Do cleanup work on the tasks after the runners are done
+ * doing their thing.
+ *
+ * @param s The #scheduler.
+ */
+void scheduler_end_launch(struct scheduler *s) {
+
+  if (s->space->e->subcycle_rt){
+    /* For the RT subcycling, we need to manually keep track of the dependencies during the subcycling. Contrary to the normal dependencies, they don't get decreased when a task is being unlocked, so that we may reset the correct number of dependencies during each cycle. Since the number of dependencies may vary between two steps, it needs to be reset after the step is done so that the next step's values will be correct. */
+    /* TODO MLADEN: store s->active_count as s->active_count_old in scheduler_start, then do this loop only over s->active_tid */
+    threadpool_map(s->threadpool, rt_subcycle_reset_wait_mapper, s->tasks,
+                   s->nr_tasks, sizeof(int), threadpool_auto_chunk_size, s);
+  }
 }
 
 /**

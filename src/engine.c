@@ -1703,6 +1703,9 @@ void engine_launch(struct engine *e, const char *call) {
   /* Sit back and wait for the runners to come home. */
   swift_barrier_wait(&e->wait_barrier);
 
+  /* Do some clean-up work on the tasks after they've been run. */
+  scheduler_end_launch(&e->sched);
+
   /* Store the wallclock time */
   e->sched.total_ticks += getticks() - tic;
 
