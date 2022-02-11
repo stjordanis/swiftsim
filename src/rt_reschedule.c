@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include "rt_reschedule.h"
+#include "scheduler.h"
 
 /**
  * @file src/rt_reschedule.c
@@ -114,4 +115,59 @@ int rt_requeue(struct engine *e, struct cell *c) {
   scheduler_enqueue(&e->sched, rt_transport_out);
 
   return 1;
+}
+
+/**
+ * @brief #threadpool_map function which runs through the task
+ *        graph and re-computes the task wait counters for the
+ *        RT subcycling.
+ */
+void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
+                                 void *extra_data) {
+  struct scheduler *s = (struct scheduler *)extra_data;
+  const int *tid = (int *)map_data;
+
+  for (int ind = 0; ind < num_elements; ind++) {
+    struct task *t = &s->tasks[tid[ind]];
+
+    /* Ignore skipped tasks. */
+    if (t->skip) continue;
+
+    /* Select here which tasks you need. */
+    enum task_types tt = t->type;
+    enum task_subtypes ts = t->subtype;
+    if (tt == task_type_rt_ghost1 ||
+        tt == task_type_rt_ghost2 || 
+        tt == task_type_rt_transport_out || 
+        task_type_rt_tchem || 
+        task_type_rt_reschedule ||
+        ((tt == task_type_pair || tt == task_type_sub_pair || tt == task_type_self || tt == task_type_sub_self) && (ts == task_subtype_rt_gradient || ts == task_subtype_rt_transport)) 
+       ) {
+
+      /* First increase your own wait. We initialize to -1 to catch possible errors. */
+      atomic_inc(&t->rt_subcycle_wait);
+
+      /* Sets the subcycle_waits of the dependances */
+      for (int k = 0; k < t->nr_unlock_tasks; k++) {
+        struct task *u = t->unlock_tasks[k];
+        atomic_inc(&u->rt_subcycle_wait);
+      }
+    }
+  }
+}
+
+/**
+ * @brief #threadpool_map function which runs through the task
+ *        graph and re-computes the task wait counters for the
+ *        RT subcycling.
+ */
+void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
+                                   void *extra_data) {
+  struct scheduler *s = (struct scheduler *)extra_data;
+
+  for (int ind = 0; ind < num_elements; ind++) {
+    struct task *t = &s->tasks[ind];
+    /* Ignore skipped tasks. */
+    t->rt_subcycle_wait = -1;
+  }
 }

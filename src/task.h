@@ -261,6 +261,9 @@ struct task {
   /*! Number of unsatisfied dependencies */
   int wait;
 
+  /*! Number of unsatisfied dependencies for the RT subcycling*/
+  int rt_subcycle_wait;
+
   /*! Type of the task */
   enum task_types type;
 
