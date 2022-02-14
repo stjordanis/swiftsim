@@ -1260,7 +1260,8 @@ struct task *scheduler_addtask(struct scheduler *s, enum task_types type,
   t->subtype = subtype;
   t->flags = flags;
   t->wait = 0;
-  t->rt_subcycle_wait = -1; /* To be safe, keep this negative. Only RT tasks will be set properly. */
+  t->rt_subcycle_wait = -1; /* To be safe, keep this negative. Only RT tasks
+                               will be set properly. */
   t->ci = ci;
   t->cj = cj;
   t->skip = 1; /* Mark tasks as skip by default. */
@@ -1960,10 +1961,11 @@ void scheduler_start(struct scheduler *s) {
     scheduler_rewait_mapper(s->tid_active, s->active_count, s);
   }
 
-  if (s->space->e->subcycle_rt){
+  if (s->space->e->subcycle_rt) {
     if (s->active_count > 1000) {
-    threadpool_map(s->threadpool, rt_subcycle_rewait_mapper, s->tid_active,
-                   s->active_count, sizeof(int), threadpool_auto_chunk_size, s);
+      threadpool_map(s->threadpool, rt_subcycle_rewait_mapper, s->tid_active,
+                     s->active_count, sizeof(int), threadpool_auto_chunk_size,
+                     s);
     } else {
       rt_subcycle_rewait_mapper(s->tid_active, s->active_count, s);
     }
@@ -1988,7 +1990,7 @@ void scheduler_start(struct scheduler *s) {
  *
  * @param s The #scheduler.
  */
-void scheduler_check_all_tasks_finished(struct scheduler *s){
+void scheduler_check_all_tasks_finished(struct scheduler *s) {
 
   int unfinished_types[task_type_count];
   bzero(unfinished_types, sizeof(int) * task_type_count);
@@ -1996,9 +1998,9 @@ void scheduler_check_all_tasks_finished(struct scheduler *s){
   bzero(unfinished_subtypes, sizeof(int) * task_subtype_count);
   int unfinished = 0;
 
-  for (int i = 0; i < s->nr_tasks; i++){
+  for (int i = 0; i < s->nr_tasks; i++) {
     struct task t = s->tasks[i];
-    if (t.skip == 0){
+    if (t.skip == 0) {
       unfinished++;
       unfinished_types[t.type]++;
       unfinished_subtypes[t.subtype]++;
@@ -2008,14 +2010,17 @@ void scheduler_check_all_tasks_finished(struct scheduler *s){
   if (unfinished) {
     message("ERROR: Found tasks that haven't been done! Count=%d", unfinished);
     for (int i = 0; i < task_type_count; i++) {
-      if (unfinished_types[i] > 0) message("Unfinished task    type %20s : %d", taskID_names[i], unfinished_types[i]);
+      if (unfinished_types[i] > 0)
+        message("Unfinished task    type %20s : %d", taskID_names[i],
+                unfinished_types[i]);
     }
     for (int i = 0; i < task_subtype_count; i++) {
-      if (unfinished_subtypes[i] > 0) message("Unfinished task subtype %20s : %d", subtaskID_names[i], unfinished_subtypes[i]);
+      if (unfinished_subtypes[i] > 0)
+        message("Unfinished task subtype %20s : %d", subtaskID_names[i],
+                unfinished_subtypes[i]);
     }
     error("This is bad.");
   }
-
 }
 
 /**
@@ -2026,13 +2031,19 @@ void scheduler_check_all_tasks_finished(struct scheduler *s){
  */
 void scheduler_end_launch(struct scheduler *s) {
 
-  if (s->space->e->subcycle_rt){
-    /* For the RT subcycling, we need to manually keep track of the dependencies during the subcycling. Contrary to the normal dependencies, they don't get decreased when a task is being unlocked, so that we may reset the correct number of dependencies during each cycle. Since the number of dependencies may vary between two steps, it needs to be reset after the step is done so that the next step's values will be correct. */
-    threadpool_map(s->threadpool, rt_subcycle_reset_wait_mapper, s->tid_active, s->active_count,
-                   sizeof(int), threadpool_auto_chunk_size, s);
+  if (s->space->e->subcycle_rt) {
+    /* For the RT subcycling, we need to manually keep track of the dependencies
+     * during the subcycling. Contrary to the normal dependencies, they don't
+     * get decreased when a task is being unlocked, so that we may reset the
+     * correct number of dependencies during each cycle. Since the number of
+     * dependencies may vary between two steps, it needs to be reset after the
+     * step is done so that the next step's values will be correct. */
+    threadpool_map(s->threadpool, rt_subcycle_reset_wait_mapper, s->tid_active,
+                   s->active_count, sizeof(int), threadpool_auto_chunk_size, s);
 
 #ifdef SWIFT_RT_DEBUG_CHECKS
-    /* We trust the scheduler enough to do this check only if we're using RT subcycling */
+    /* We trust the scheduler enough to do this check only if we're using RT
+     * subcycling */
     scheduler_check_all_tasks_finished(s);
 #endif
   }
@@ -2361,6 +2372,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
       error("Negative wait!");
+      /* error("Negative wait! %s/%s", taskID_names[t2->type], subtaskID_names[t2->subtype]); */
     } else if (res == 1) {
       scheduler_enqueue(s, t2);
     }

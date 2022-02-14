@@ -23,6 +23,7 @@
 #include "cell.h"
 #include "engine.h"
 #include "runner.h"
+#include "rt.h"
 #include "task.h"
 
 /**
@@ -36,7 +37,10 @@
 void rt_reschedule_task(struct engine *e, struct task *t, int wait);
 int rt_requeue(struct engine *e, struct cell *c);
 int rt_reschedule(struct runner *r, struct cell *c);
-void rt_subcycle_rewait_mapper(void *map_data, int num_elements, void *extra_data);
-void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements, void *extra_data);
+void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
+                               void *extra_data);
+void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
+                                   void *extra_data);
+void rt_reschedule_particle_checks(struct part* restrict p);
 
 #endif /* defined SWIFT_RT_RESCHEDULE_H */
