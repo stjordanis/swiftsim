@@ -266,8 +266,12 @@ void *runner_main(void *data) {
             runner_doself_branch_bh_feedback(r, ci);
           else if (t->subtype == task_subtype_rt_gradient)
             runner_doself1_branch_rt_gradient(r, ci);
-          else if (t->subtype == task_subtype_rt_transport)
+            if (t->ci->cellID == 1) message("RAN GRADIENT SELF CELL %lld", t->ci->cellID);
+            }
+          else if (t->subtype == task_subtype_rt_transport){
+            if (t->ci->cellID == 1)message("RAN TRANSPORT SELF CELL %lld", t->ci->cellID);
             runner_doself2_branch_rt_transport(r, ci);
+            }
           else if (t->subtype == task_subtype_sink_compute_formation)
             runner_doself_branch_sinks_compute_formation(r, ci);
           else if (t->subtype == task_subtype_sink_accretion)
@@ -314,8 +318,10 @@ void *runner_main(void *data) {
             runner_dopair_branch_bh_feedback(r, ci, cj);
           else if (t->subtype == task_subtype_rt_gradient)
             runner_dopair1_branch_rt_gradient(r, ci, cj);
-          else if (t->subtype == task_subtype_rt_transport)
+            if (t->ci->cellID == 1)message("RAN GRADIENT PAIR CELL %lld", t->ci->cellID);}
+          else if (t->subtype == task_subtype_rt_transport){
             runner_dopair2_branch_rt_transport(r, ci, cj);
+            if (t->ci->cellID == 1)message("RAN TRANSPORT PAIR CELL %lld", t->ci->cellID);}
           else if (t->subtype == task_subtype_sink_compute_formation)
             runner_dopair_branch_sinks_compute_formation(r, ci, cj);
           else if (t->subtype == task_subtype_sink_accretion)
@@ -360,8 +366,10 @@ void *runner_main(void *data) {
             runner_dosub_self_bh_feedback(r, ci, 1);
           else if (t->subtype == task_subtype_rt_gradient)
             runner_dosub_self1_rt_gradient(r, ci, 1);
-          else if (t->subtype == task_subtype_rt_transport)
+            if (t->ci->cellID == 1)message("RAN GRADIENT SUBSELF CELL %lld", t->ci->cellID);}
+          else if (t->subtype == task_subtype_rt_transport){
             runner_dosub_self2_rt_transport(r, ci, 1);
+            if (t->ci->cellID == 1)message("RAN TRANSPORT SUBSELF CELL %lld", t->ci->cellID);}
           else if (t->subtype == task_subtype_sink_compute_formation)
             runner_dosub_self_sinks_compute_formation(r, ci, 1);
           else if (t->subtype == task_subtype_sink_accretion)
@@ -406,8 +414,10 @@ void *runner_main(void *data) {
             runner_dosub_pair_bh_feedback(r, ci, cj, 1);
           else if (t->subtype == task_subtype_rt_gradient)
             runner_dosub_pair1_rt_gradient(r, ci, cj, 1);
-          else if (t->subtype == task_subtype_rt_transport)
+            if (t->ci->cellID == 1)message("RAN GRADIENT SUBPAIR CELL %lld", t->ci->cellID);}
+          else if (t->subtype == task_subtype_rt_transport){
             runner_dosub_pair2_rt_transport(r, ci, cj, 1);
+            if (t->ci->cellID == 1)message("RAN TRANSPORT SUBPAIR CELL %lld", t->ci->cellID);}
           else if (t->subtype == task_subtype_sink_compute_formation)
             runner_dosub_pair_sinks_compute_formation(r, ci, cj, 1);
           else if (t->subtype == task_subtype_sink_accretion)
@@ -604,15 +614,19 @@ void *runner_main(void *data) {
           break;
         case task_type_rt_ghost1:
           runner_do_rt_ghost1(r, t->ci, 1);
+          if (t->ci->cellID == 1)message("RAN GHOST1 CELL %lld", t->ci->cellID);
           break;
         case task_type_rt_ghost2:
           runner_do_rt_ghost2(r, t->ci, 1);
+          if (t->ci->cellID == 1)message("RAN GHOST2 CELL %lld", t->ci->cellID);
           break;
         case task_type_rt_tchem:
           runner_do_rt_tchem(r, t->ci, 1);
+          if (t->ci->cellID == 1)message("RAN TCHEM CELL %lld", t->ci->cellID);
           break;
         case task_type_rt_reschedule:
-          rt_rescheduled = runner_do_rt_reschedule(r, t->ci, 1);
+          rt_rescheduled = runner_do_rt_reschedule(r, t->ci, 1, /*recurse=*/0);
+          if (t->ci->cellID == 1)message("RAN RESCHEDULE CELL %lld", t->ci->cellID);
           break;
         default:
           error("Unknown/invalid task type (%d).", t->type);

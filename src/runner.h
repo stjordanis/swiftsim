@@ -130,7 +130,7 @@ void runner_do_fof_pair(struct runner *r, struct cell *ci, struct cell *cj,
 void runner_do_rt_ghost1(struct runner *r, struct cell *c, int timer);
 void runner_do_rt_ghost2(struct runner *r, struct cell *c, int timer);
 void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer);
-int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer);
+int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer, int recurse);
 void runner_do_gas_swallow_self(struct runner *r, struct cell *c, int timer);
 void runner_do_bh_swallow_self(struct runner *r, struct cell *c, int timer);
 void runner_do_gas_swallow_pair(struct runner *r, struct cell *ci,
