@@ -41,6 +41,8 @@ void rt_reschedule_task(struct engine *e, struct task *t, int wait) {
 #else
   long long cellID = -1;
 #endif
+  if (wait < 0) error("Got negative wait (%d) to reschedule: %s/%s cellID %lld",
+          wait, taskID_names[t->type], subtaskID_names[t->subtype], cellID);
 
   int w, s;
   if ((w = atomic_cas(&t->wait, 0, wait)) != 0)
@@ -79,10 +81,12 @@ int rt_reschedule(struct runner *r, struct cell *c) {
     /* Set all RT tasks that do actual work back to a re-queueable state. */
 
     struct task *rt_transport_out = c->hydro.rt_transport_out;
+    if (c->cellID == 1) message("CellID %lld Got rt_transport_out->wait = %d", c->cellID, rt_transport_out->rt_subcycle_wait);
     rt_reschedule_task(e, rt_transport_out, /*wait =*/0);
 
     struct task *rt_tchem = c->hydro.rt_tchem;
-    rt_reschedule_task(e, rt_tchem, /*wait =*/1);
+    if (c->cellID == 1) message("CellID %lld Got rt_tchem->wait = %d", c->cellID, rt_tchem->rt_subcycle_wait);
+    rt_reschedule_task(e, rt_tchem, /*wait =*/rt_tchem->rt_subcycle_wait);
 
     /* Make sure we don't fully unlock the dependency that follows
      * after the rt_reschedule task: block the implicit rt_out */
@@ -108,7 +112,8 @@ int rt_requeue(struct engine *e, struct cell *c) {
 
   /* Re-schedule the rescheduler task. */
   struct task *rt_reschedule = c->hydro.rt_reschedule;
-  rt_reschedule_task(e, rt_reschedule, /*wait =*/1);
+  if (c->cellID == 1) message("CellID %lld Got rt_reschedule->wait = %d", c->cellID, rt_reschedule->rt_subcycle_wait);
+  rt_reschedule_task(e, rt_reschedule, /*wait =*/rt_reschedule->rt_subcycle_wait);
 
   /* Finally, enqueue the RT task at the top of the hierarchy. */
   struct task *rt_transport_out = c->hydro.rt_transport_out;
@@ -146,11 +151,13 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
 
       /* First increase your own wait. We initialize to -1 to catch possible errors. */
       atomic_inc(&t->rt_subcycle_wait);
+      if (t->ci->cellID == 1 && t->type == task_type_rt_tchem) message("CellID %lld Got rt_tchem->rt_subcycle_wait = %d after call on it self", t->ci->cellID, t->rt_subcycle_wait);
 
       /* Sets the subcycle_waits of the dependances */
       for (int k = 0; k < t->nr_unlock_tasks; k++) {
         struct task *u = t->unlock_tasks[k];
         atomic_inc(&u->rt_subcycle_wait);
+        if (u->ci->cellID == 1 && u->type == task_type_rt_tchem) message("CellID %lld Got rt_tchem->rt_subcycle_wait = %d after call from unlock", u->ci->cellID, u->rt_subcycle_wait);
       }
     }
   }
@@ -158,16 +165,20 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
 
 /**
  * @brief #threadpool_map function which runs through the task
- *        graph and re-computes the task wait counters for the
- *        RT subcycling.
+ *        graph and resets the task wait counters for the RT subcycling.
  */
 void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
                                    void *extra_data) {
+
+
   struct scheduler *s = (struct scheduler *)extra_data;
+  const int *tid = (int *)map_data;
+  struct task *tasks = s->tasks;
 
   for (int ind = 0; ind < num_elements; ind++) {
-    struct task *t = &s->tasks[ind];
-    /* Ignore skipped tasks. */
+    struct task *t = &tasks[tid[ind]];
     t->rt_subcycle_wait = -1;
+    if (t->ci->cellID == 1 && t->type == task_type_rt_tchem) message("CellID %lld Set rt_tchem->rt_subcycle_wait = %d", t->ci->cellID, t->rt_subcycle_wait);
   }
+
 }

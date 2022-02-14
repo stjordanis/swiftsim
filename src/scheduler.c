@@ -1969,13 +1969,45 @@ void scheduler_start(struct scheduler *s) {
     scheduler_enqueue_mapper(s->tid_active, s->active_count, s);
   }
 
-  /* Clear the list of active tasks. */
-  s->active_count = 0;
-
   /* To be safe, fire of one last sleep_cond in a safe way. */
   pthread_mutex_lock(&s->sleep_mutex);
   pthread_cond_broadcast(&s->sleep_cond);
   pthread_mutex_unlock(&s->sleep_mutex);
+}
+
+/**
+ * @brief Check that there are no tasks left with skip=0.
+ *
+ * @param s The #scheduler.
+ */
+void scheduler_check_all_tasks_finished(struct scheduler *s){
+
+  int unfinished_types[task_type_count];
+  bzero(unfinished_types, sizeof(int) * task_type_count);
+  int unfinished_subtypes[task_subtype_count];
+  bzero(unfinished_subtypes, sizeof(int) * task_subtype_count);
+  int unfinished = 0;
+
+  for (int i = 0; i < s->nr_tasks; i++){
+    struct task t = s->tasks[i];
+    if (t.skip == 0){
+      unfinished++;
+      unfinished_types[t.type]++;
+      unfinished_subtypes[t.subtype]++;
+    }
+  }
+
+  if (unfinished) {
+    message("ERROR: Found tasks that haven't been done! Count=%d", unfinished);
+    for (int i = 0; i < task_type_count; i++) {
+      if (unfinished_types[i] > 0) message("Unfinished task    type %20s : %d", taskID_names[i], unfinished_types[i]);
+    }
+    for (int i = 0; i < task_subtype_count; i++) {
+      if (unfinished_subtypes[i] > 0) message("Unfinished task subtype %20s : %d", subtaskID_names[i], unfinished_subtypes[i]);
+    }
+    error("This is bad.");
+  }
+
 }
 
 /**
@@ -1988,10 +2020,17 @@ void scheduler_end_launch(struct scheduler *s) {
 
   if (s->space->e->subcycle_rt){
     /* For the RT subcycling, we need to manually keep track of the dependencies during the subcycling. Contrary to the normal dependencies, they don't get decreased when a task is being unlocked, so that we may reset the correct number of dependencies during each cycle. Since the number of dependencies may vary between two steps, it needs to be reset after the step is done so that the next step's values will be correct. */
-    /* TODO MLADEN: store s->active_count as s->active_count_old in scheduler_start, then do this loop only over s->active_tid */
-    threadpool_map(s->threadpool, rt_subcycle_reset_wait_mapper, s->tasks,
-                   s->nr_tasks, sizeof(int), threadpool_auto_chunk_size, s);
+    threadpool_map(s->threadpool, rt_subcycle_reset_wait_mapper, s->tid_active, s->active_count,
+                   sizeof(int), threadpool_auto_chunk_size, s);
+
+#ifdef SWIFT_RT_DEBUG_CHECKS
+    /* We trust the scheduler enough to do this check only if we're using RT subcycling */
+    scheduler_check_all_tasks_finished(s);
+#endif
   }
+
+  /* Clear the list of active tasks. */
+  s->active_count = 0;
 }
 
 /**
