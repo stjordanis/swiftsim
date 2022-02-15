@@ -28,6 +28,7 @@
 /* Includes. */
 #include "align.h"
 #include "cycle.h"
+#include "lock.h"
 #include "timeline.h"
 
 /* Forward declarations to avoid circular inclusion dependencies. */
@@ -294,6 +295,9 @@ struct task {
   /* When was this task last run? */
   integertime_t ti_run;
 #endif /* SWIFT_DEBUG_CHECKS */
+
+  /*! Lock for modification of tasks during rescheduling */
+  swift_lock_type reschedule_lock;
 
 } SWIFT_STRUCT_ALIGN;
 

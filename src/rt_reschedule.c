@@ -29,31 +29,85 @@
 /**
  * @brief Set a task that has been run to a state where it can
  * run (ie enqueued) again.
- * @param e the #engine
  * @param t the #task to re-schedule
  * @param wait number of dependencies to set for this task.
  */
-void rt_reschedule_task(struct engine *e, struct task *t, int wait) {
+void rt_reschedule_task(struct task *t, int wait) {
 
-  if (t == NULL) return;
+  if (t == NULL) error("Passed NULL instead of task!?");
 
 #ifdef SWIFT_DEBUG_CHECKS
   long long cellID = t->ci->cellID;
 #else
   long long cellID = -1;
 #endif
+
   if (wait < 0)
     error("Got negative wait (%d) to reschedule: %s/%s cellID %lld cycle %d", wait,
           taskID_names[t->type], subtaskID_names[t->subtype], cellID, t->ci->hydro.rt_cycle);
 
-  if (atomic_cas(&t->wait, 0, wait) != 0)
-    error("Got t->wait = %d? Should be zero when rescheduling %s/%s cellID %lld cycle %d",
-          t->wait, taskID_names[t->type], subtaskID_names[t->subtype], cellID, t->ci->hydro.rt_cycle);
   if (atomic_cas(&t->skip, 1, 0) != 1)
     error(
         "Trying to reschedule a task with skip = %d; Should be 1 when "
         "rescheduling ; task %s/%s cell %lld cycle %d",
         t->skip, taskID_names[t->type], subtaskID_names[t->subtype], cellID, t->ci->hydro.rt_cycle);
+
+  if (atomic_cas(&t->wait, 0, wait) != 0)
+    error("Got t->wait = %d? Should be zero when rescheduling %s/%s cellID %lld cycle %d",
+          t->wait, taskID_names[t->type], subtaskID_names[t->subtype], cellID, t->ci->hydro.rt_cycle);
+}
+
+
+/**
+ * @brief Set a task that has been run and is part of a link group to a 
+ * state where it can run (ie enqueued) again.
+ * @param t the #task to re-schedule
+ * @param wait number of dependencies to set for this task.
+ */
+void rt_reschedule_linked_task(struct task* t, int wait){
+
+  if (t == NULL) error("Passed NULL instead of task!?");
+
+#ifdef SWIFT_DEBUG_CHECKS
+  long long cellID = t->ci->cellID;
+#else
+  long long cellID = -1;
+#endif
+
+  /* If task wasn't active this step, it should have rt_subcycle_wait = -1. */
+  /* If that is the case, don't reschedule it. */
+  if (t->rt_subcycle_wait == -1) {
+    /* Keep this for now to see that it actually occurs. */
+    message("Caught cell %lld rt %s task with rt_subcycle_wait == -1", cellID, subtaskID_names[t->subtype]);
+  } else if (t->rt_subcycle_wait == 0) {
+    /* These tasks must have at least one dependency. */
+    error("Subcycling %s with no dependencies?", subtaskID_names[t->subtype]);
+  } else {
+    if (t->type == task_type_self || t->type == task_type_sub_self) {
+      rt_reschedule_task(t, wait);
+    } 
+    else if (t->type == task_type_pair || t->type == task_type_sub_pair) {
+
+      /* Race conditions to modify pair type tasks are common. 
+       * Guard with a lock. */
+      lock_lock(&t->reschedule_lock);
+
+      if (t->skip == 0) {
+        /* The task is already rescheduled by the other cell's call. Don't reset
+         * the waits then, because some dependencies might already be unlocked. */
+#ifdef SWIFT_DEBUG_CHECKS
+        if (t->wait < 0 || t->wait > t->rt_subcycle_wait) error("Cell %lld: Inconsistent wait for task while rescheduling: " "wait=%d, rt_subcycle_wait=%d, skip=%d", cellID, t->wait, t->rt_subcycle_wait, t->skip);
+#endif
+      } else {
+        /* Skipped tasks should have wait = 0. If this is not the case, something is wrong. */
+        if (t->wait != 0) error("Cell %lld: Inconsistent wait for task while rescheduling: wait=%d, rt_subcycle_wait=%d, skip=%d, %s/%s", cellID, t->wait, t->rt_subcycle_wait, t->skip, taskID_names[t->type], subtaskID_names[t->subtype]);
+        rt_reschedule_task(t, wait);
+      }
+
+      if (lock_unlock(&t->reschedule_lock) != 0) error("Failed to unlock %s cell %lld during rescheduling", subtaskID_names[t->subtype], cellID);
+
+    }
+  }
 }
 
 /**
@@ -85,111 +139,33 @@ int rt_reschedule(struct runner *r, struct cell *c) {
     /* Set all RT tasks that do actual work back to a re-queueable state. */
 
     /* rt_ghost1 is the task at the top of the hierarchy. Don't let it
-     * wait for any dependencies. */
+     * wait for any dependencies. Don't enqueue it yet. */
     struct task *rt_ghost1 = c->hydro.rt_ghost1;
-    if (rt_ghost1 != NULL) rt_reschedule_task(e, rt_ghost1, /*wait=*/0);
-    if (cellID == 1)
-      message("CellID %lld Rescheduled rt_ghost1", cellID);
+    if (rt_ghost1 != NULL) rt_reschedule_task(rt_ghost1, /*wait=*/0);
+    if (cellID == 1) message("CellID %lld Rescheduled rt_ghost1", cellID);
 
-    int gradient_counter = 0;
     for (struct link *l = c->hydro.rt_gradient; l != NULL; l = l->next) {
       struct task *t = l->t;
-
-      /* If task wasn't active this step, it should have rt_subcycle_wait = -1. */
-      /* If that is the case, don't reschedule it. */
-      if (t->rt_subcycle_wait == -1) {
-        /* Keep this for now to see that it actually occurs */
-        message("Caught cell %lld rt gradient task with rt_subcycle_wait == -1", cellID);
-        continue;
-      } else if (t->rt_subcycle_wait == 0) {
-        /* These tasks must have at least one dependency. */
-        error("Subcycling RT gradient task with no dependencies?");
-      } else {
-        if (t->type == task_type_self || t->type == task_type_sub_self) {
-          rt_reschedule_task(e, t, t->rt_subcycle_wait);
-          gradient_counter++;
-        } else if (t->type == task_type_pair || t->type == task_type_sub_pair) {
-          /* The task might have already been rescheduled through the other
-           * cell. Make sure you don't reset the waits then, because some
-           * dependencies might've already been unlocked. */
-          if (t->skip == 0) {
-            /* Task already unlocked through the other cell. */
-#ifdef SWIFT_DEBUG_CHECKS
-            if (t->wait < 0 || t->wait > t->rt_subcycle_wait)
-              error("Cell %lld: Inconsistent wait for task while rescheduling: " "wait=%d, rt_subcycle_wait=%d, skip=%d", cellID, t->wait, t->rt_subcycle_wait, t->skip);
-#endif
-          } else if (t->skip == 1) {
-#ifdef SWIFT_DEBUG_CHECKS
-            if (t->wait != 0)
-              error(
-                  "Cell %lld: Inconsistent wait for task while rescheduling: "
-                  "wait=%d, rt_subcycle_wait=%d, skip=%d",
-                  cellID, t->wait, t->rt_subcycle_wait, t->skip);
-#endif
-            rt_reschedule_task(e, t, t->rt_subcycle_wait);
-            gradient_counter++;
-          }
-#ifdef SWIFT_DEBUG_CHECKS
-        } else {
-          error("Wrong task type in gradient link?????");
-#endif
-        }
-      }
+      rt_reschedule_linked_task(t, t->rt_subcycle_wait);
     }
-    if (cellID == 1 && gradient_counter) message("CellID %lld rescheduled %d gradient tasks", cellID, gradient_counter);
+    if (cellID == 1) message("CellID %lld rescheduled gradient tasks", cellID);
 
     struct task *rt_ghost2 = c->hydro.rt_ghost2;
-    if (rt_ghost2 != NULL) rt_reschedule_task(e, rt_ghost2, rt_ghost2->rt_subcycle_wait);
-    if (cellID == 1)
-      message("CellID %lld Rescheduled rt_ghost2; wait = %d", cellID, rt_ghost2->rt_subcycle_wait);
+    if (rt_ghost2 != NULL) rt_reschedule_task(rt_ghost2, rt_ghost2->rt_subcycle_wait);
+    if (cellID == 1) message("CellID %lld Rescheduled rt_ghost2; wait = %d", cellID, rt_ghost2->rt_subcycle_wait);
 
-    int transport_counter = 0;
     for (struct link *l = c->hydro.rt_transport; l != NULL; l = l->next) {
       struct task *t = l->t;
-
-      /* If task wasn't active this step, it should have rt_subcycle_wait = -1. */
-      /* If that is the case, don't reschedule it. */
-      if (t->rt_subcycle_wait == -1) {
-        /* Keep this for now to see that it actually occurs */
-        message( "Caught cell %lld rt transport task with rt_subcycle_wait == -1", cellID);
-        continue;
-      } else if (t->rt_subcycle_wait == 0) {
-        /* These tasks must have at least one dependency. */
-        error("Subcycling RT transport task with no dependencies?");
-      } else {
-        if (t->type == task_type_self || t->type == task_type_sub_self) {
-          rt_reschedule_task(e, t, t->rt_subcycle_wait);
-        } else if (t->type == task_type_pair || t->type == task_type_sub_pair) {
-          /* The task might have already been rescheduled through the other */
-          /* cell. Make sure you don't reset the waits then, because some */
-          /* dependencies might've already been unlocked. */
-          if (t->skip == 0) {
-            /* Task already unlocked through the other cell. */
-#ifdef SWIFT_DEBUG_CHECKS
-            if (t->wait < 0 || t->wait > t->rt_subcycle_wait) error( "Cell %lld: Inconsistent wait for task while rescheduling: " "wait=%d, rt_subcycle_wait=%d, skip=%d", cellID, t->wait, t->rt_subcycle_wait, t->skip); 
-#endif
-            } else if (t->skip == 1) {
-#ifdef SWIFT_DEBUG_CHECKS
-            if (t->wait != 0) error( "Cell %lld: Inconsistent wait for task while rescheduling: " "wait=%d, rt_subcycle_wait=%d, skip=%d", cellID, t->wait, t->rt_subcycle_wait, t->skip);
-#endif
-            rt_reschedule_task(e, t, t->rt_subcycle_wait);
-            transport_counter++;
-          }
-#ifdef SWIFT_DEBUG_CHECKS
-        } else {
-          error("Wrong task type in transport link?????");
-#endif
-        }
-      }
+      rt_reschedule_linked_task(t, t->rt_subcycle_wait);
     }
-    if (cellID == 1 && gradient_counter) message("CellID %lld rescheduled %d transport tasks", cellID, gradient_counter);
+    if (cellID == 1) message("CellID %lld rescheduled transport tasks", cellID);
 
     struct task *rt_transport_out = c->hydro.rt_transport_out;
-    if (rt_transport_out != NULL) rt_reschedule_task(e, rt_transport_out, rt_transport_out->rt_subcycle_wait);
+    if (rt_transport_out != NULL) rt_reschedule_task(rt_transport_out, rt_transport_out->rt_subcycle_wait);
     if (cellID == 1) message("CellID %lld Rescheduled rt_transport_out; wait = %d", cellID, rt_transport_out->wait);
 
     struct task *rt_tchem = c->hydro.rt_tchem;
-    if (rt_tchem != NULL) rt_reschedule_task(e, rt_tchem, rt_tchem->rt_subcycle_wait);
+    if (rt_tchem != NULL) rt_reschedule_task(rt_tchem, rt_tchem->rt_subcycle_wait);
     if (cellID == 1) message("CellID %lld Rescheduled rt_tchem; wait = %d", cellID, rt_tchem->wait);
 
     /* Make sure we don't fully unlock the dependency that follows */
@@ -227,7 +203,7 @@ int rt_requeue(struct engine *e, struct cell *c) {
 
   /* Re-schedule the rescheduler task. */
   struct task *rt_reschedule = c->hydro.rt_reschedule;
-  rt_reschedule_task(e, rt_reschedule, /*wait =*/rt_reschedule->rt_subcycle_wait);
+  rt_reschedule_task(rt_reschedule, /*wait =*/rt_reschedule->rt_subcycle_wait);
 
   /* Finally, enqueue the RT task at the top of the hierarchy. */
   struct task *rt_ghost1 = c->hydro.rt_ghost1;
