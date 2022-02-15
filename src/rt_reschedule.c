@@ -17,7 +17,6 @@
  *
  ******************************************************************************/
 
-/* #include "rt.h" */
 #include "rt_reschedule.h"
 #include "scheduler.h"
 
@@ -95,10 +94,14 @@ void rt_reschedule_linked_task(struct task* t, int wait){
       if (t->skip == 0) {
         /* The task is already rescheduled by the other cell's call. Don't reset
          * the waits then, because some dependencies might already be unlocked. */
+        if ((t->ci->cellID == 27 || t->cj->cellID == 27) && t->subtype == task_subtype_rt_gradient) 
+          message("Cells %lld/%lld skip=0 NOT rescheduling gradient with c->rt_cycles %d / %d", t->ci->cellID, t->cj->cellID, t->ci->hydro.rt_cycle, t->cj->hydro.rt_cycle);
 #ifdef SWIFT_DEBUG_CHECKS
         if (t->wait < 0 || t->wait > t->rt_subcycle_wait) error("Cell %lld: Inconsistent wait for task while rescheduling: " "wait=%d, rt_subcycle_wait=%d, skip=%d", cellID, t->wait, t->rt_subcycle_wait, t->skip);
 #endif
       } else {
+        if ((t->ci->cellID == 27 || t->cj->cellID == 27) && t->subtype == task_subtype_rt_gradient) 
+          message("Cells %lld/%lld skip=1 rescheduling gradient with c->rt_cycles %d / %d", t->ci->cellID, t->cj->cellID, t->ci->hydro.rt_cycle, t->cj->hydro.rt_cycle);
         /* Skipped tasks should have wait = 0. If this is not the case, something is wrong. */
         if (t->wait != 0) error("Cell %lld: Inconsistent wait for task while rescheduling: wait=%d, rt_subcycle_wait=%d, skip=%d, %s/%s", cellID, t->wait, t->rt_subcycle_wait, t->skip, taskID_names[t->type], subtaskID_names[t->subtype]);
         rt_reschedule_task(t, wait);
@@ -142,37 +145,37 @@ int rt_reschedule(struct runner *r, struct cell *c) {
      * wait for any dependencies. Don't enqueue it yet. */
     struct task *rt_ghost1 = c->hydro.rt_ghost1;
     if (rt_ghost1 != NULL) rt_reschedule_task(rt_ghost1, /*wait=*/0);
-    if (cellID == 1) message("CellID %lld Rescheduled rt_ghost1", cellID);
+    if (cellID == 27) message("CellID %lld Rescheduled rt_ghost1", cellID);
 
     for (struct link *l = c->hydro.rt_gradient; l != NULL; l = l->next) {
       struct task *t = l->t;
       rt_reschedule_linked_task(t, t->rt_subcycle_wait);
     }
-    if (cellID == 1) message("CellID %lld rescheduled gradient tasks", cellID);
+    if (cellID == 27) message("CellID %lld rescheduled gradient tasks", cellID);
 
     struct task *rt_ghost2 = c->hydro.rt_ghost2;
     if (rt_ghost2 != NULL) rt_reschedule_task(rt_ghost2, rt_ghost2->rt_subcycle_wait);
-    if (cellID == 1) message("CellID %lld Rescheduled rt_ghost2; wait = %d", cellID, rt_ghost2->rt_subcycle_wait);
+    if (cellID == 27) message("CellID %lld Rescheduled rt_ghost2; wait = %d", cellID, rt_ghost2->rt_subcycle_wait);
 
     for (struct link *l = c->hydro.rt_transport; l != NULL; l = l->next) {
       struct task *t = l->t;
       rt_reschedule_linked_task(t, t->rt_subcycle_wait);
     }
-    if (cellID == 1) message("CellID %lld rescheduled transport tasks", cellID);
+    if (cellID == 27) message("CellID %lld rescheduled transport tasks", cellID);
 
     struct task *rt_transport_out = c->hydro.rt_transport_out;
     if (rt_transport_out != NULL) rt_reschedule_task(rt_transport_out, rt_transport_out->rt_subcycle_wait);
-    if (cellID == 1) message("CellID %lld Rescheduled rt_transport_out; wait = %d", cellID, rt_transport_out->wait);
+    if (cellID == 27) message("CellID %lld Rescheduled rt_transport_out; wait = %d", cellID, rt_transport_out->wait);
 
     struct task *rt_tchem = c->hydro.rt_tchem;
     if (rt_tchem != NULL) rt_reschedule_task(rt_tchem, rt_tchem->rt_subcycle_wait);
-    if (cellID == 1) message("CellID %lld Rescheduled rt_tchem; wait = %d", cellID, rt_tchem->wait);
+    if (cellID == 27) message("CellID %lld Rescheduled rt_tchem; wait = %d", cellID, rt_tchem->wait);
 
     /* Make sure we don't fully unlock the dependency that follows */
     /* after the rt_reschedule task: block the implicit rt_out */
     struct task *rt_out = c->hydro.rt_out;
     if (rt_out != NULL) atomic_inc(&rt_out->wait);
-    if (cellID == 1) message("CellID %lld blocking rt_out; wait = %d", cellID, rt_out->wait);
+    if (cellID == 27) message("CellID %lld blocking rt_out; wait = %d", cellID, rt_out->wait);
 
     /* There is an rt_ghost1 -> timestep dependency for cases where we have 
      * active stars, but no active gas particles in a cell. In these cases, 
@@ -182,7 +185,7 @@ int rt_reschedule(struct runner *r, struct cell *c) {
      * timestep->wait as well. */
     struct task *timestep = c->timestep;
     if (timestep != NULL) atomic_inc(&timestep->wait);
-    if (cellID == 1) message("CellID %lld blocking timestep; wait = %d", cellID, rt_out->wait);
+    if (cellID == 27) message("CellID %lld blocking timestep; wait = %d", cellID, timestep->wait);
 
     return 1;
   }
@@ -208,8 +211,7 @@ int rt_requeue(struct engine *e, struct cell *c) {
   /* Finally, enqueue the RT task at the top of the hierarchy. */
   struct task *rt_ghost1 = c->hydro.rt_ghost1;
   scheduler_enqueue(&e->sched, rt_ghost1);
-  if (c->cellID == 1)
-    message("CellID %lld enqueued rt_ghost1", c->cellID);
+  if (c->cellID == 27) message("CellID %lld enqueued rt_ghost1", c->cellID);
 
   return 1;
 }
@@ -235,9 +237,13 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
      * subcycling. */
     enum task_types tt = t->type;
     enum task_subtypes ts = t->subtype;
-    if (tt == task_type_rt_ghost1 || tt == task_type_rt_ghost2 ||
-        tt == task_type_rt_transport_out || tt == task_type_rt_tchem ||
-        tt == task_type_rt_reschedule || ts == task_subtype_rt_gradient || ts == task_subtype_rt_transport) {
+    if (tt == task_type_rt_ghost1 || 
+        tt == task_type_rt_ghost2 ||
+        tt == task_type_rt_transport_out || 
+        tt == task_type_rt_tchem ||
+        tt == task_type_rt_reschedule || 
+        ts == task_subtype_rt_gradient || 
+        ts == task_subtype_rt_transport) {
 
       /* First increase your own rt_subcycle_wait. We initialize to -1 to catch possible errors. */
       atomic_inc(&t->rt_subcycle_wait);
@@ -277,6 +283,21 @@ void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
 void rt_reschedule_particle_checks(struct part* restrict p, int rescheduled){
 
 #if defined(RT_DEBUG) || defined(RT_GEAR)
+
+#if defined SWIFT_RT_DEBUG_CHECKS
+  if (p->rt_data.debug_kicked != 1)
+    error("Trying to do rescheduling on unkicked particle %lld (count=%d)",
+          p->id, p->rt_data.debug_kicked);
+  if (p->rt_data.debug_injection_done != 1)
+    error("Trying to do rescheduling when injection step hasn't been done");
+  if (p->rt_data.debug_gradients_done != 1)
+    error("Trying to do rescheduling when gradient step hasn't been done");
+  if (p->rt_data.debug_transport_done != 1)
+    error("Trying to do rescheduling when transport step hasn't been done");
+  if (p->rt_data.debug_thermochem_done != 1)
+    error("Trying to do rescheduling when transport step hasn't been done");
+#endif
+
   /* Don't reset quantities at the end of the subcycling this step. */
   if (rescheduled) rt_debugging_reset_each_subcycle(p);
 

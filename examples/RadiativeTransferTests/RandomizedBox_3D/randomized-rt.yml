@@ -45,7 +45,7 @@ Stars:
 
 Scheduler:
   max_top_level_cells:        64
-  dependency_graph_frequency: 0
+  dependency_graph_frequency: 1
   enable_rt_subcycling:       0
 
 Restarts:

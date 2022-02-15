@@ -1979,6 +1979,25 @@ void scheduler_start(struct scheduler *s) {
   pthread_mutex_unlock(&s->sleep_mutex);
 }
 
+void scheduler_check_all_tasks_finished_mapper(void *map_data, int num_elements, void *extra_data) {
+
+  struct task * tasks = (struct task*) map_data;
+  int *unfinished_tasks = (int *)extra_data;
+
+  for (int i = 0; i < num_elements; i++) {
+    struct task t = tasks[i];
+    if (t.skip == 0) {
+      atomic_inc(&unfinished_tasks[t.type]);
+      atomic_inc(&unfinished_tasks[task_type_count + t.subtype]);
+      if (t.type == task_type_rt_ghost2) message("Caught rt_ghost2 cell %lld cycles %d", t.ci->cellID, t.ci->hydro.rt_cycle);
+    /*   if (t.subtype == task_subtype_rt_gradient) { */
+    /*     if (t.cj == NULL) message("Caught rt_gradient self cell %lld", t.ci->cellID); */
+    /*     else message("Caught rt_gradient self cells %lld %lld | depth %d %d | maxdepth %d %d", t.ci->cellID, t.cj->cellID, t.ci->depth, t.cj->depth, t.ci->maxdepth, t.cj->maxdepth); */
+    /*   } */
+    }
+  }
+}
+
 /**
  * @brief Check that there are no tasks left with skip=0.
  *
@@ -1986,34 +2005,34 @@ void scheduler_start(struct scheduler *s) {
  */
 void scheduler_check_all_tasks_finished(struct scheduler *s) {
 
-  int unfinished_types[task_type_count];
-  bzero(unfinished_types, sizeof(int) * task_type_count);
-  int unfinished_subtypes[task_subtype_count];
-  bzero(unfinished_subtypes, sizeof(int) * task_subtype_count);
-  int unfinished = 0;
+  /* Concatenate task types and subtypes into single array. */
+  int unfinished_tasks[task_type_count + task_subtype_count];
+  bzero(unfinished_tasks, sizeof(int) * (task_type_count + task_subtype_count));
 
-  for (int i = 0; i < s->nr_tasks; i++) {
-    struct task t = s->tasks[i];
-    if (t.skip == 0) {
-      unfinished++;
-      unfinished_types[t.type]++;
-      unfinished_subtypes[t.subtype]++;
-    }
+  if (s->nr_tasks > 1000) {
+    threadpool_map(s->threadpool, scheduler_check_all_tasks_finished_mapper, s->tasks,
+                   s->nr_tasks, sizeof(struct task), threadpool_auto_chunk_size, unfinished_tasks);
+  } else {
+    scheduler_check_all_tasks_finished_mapper(s->tasks, s->nr_tasks, unfinished_tasks);
   }
 
-  if (unfinished) {
-    message("ERROR: Found tasks that haven't been done! Count=%d", unfinished);
-    for (int i = 0; i < task_type_count; i++) {
-      if (unfinished_types[i] > 0)
-        message("Unfinished task    type %20s : %d", taskID_names[i],
-                unfinished_types[i]);
+  for (int t = 0; t < task_type_count; t++) {
+
+    if (unfinished_tasks[t] > 0) {
+      message("ERROR: Found tasks that haven't been done!");
+      for (int i = 0; i < task_type_count; i++) {
+        if (unfinished_tasks[i] > 0)
+          message("Unfinished task    type %20s : %d", taskID_names[i],
+                  unfinished_tasks[i]);
+      }
+      for (int i = 0; i < task_subtype_count; i++) {
+        if (unfinished_tasks[i + task_type_count] > 0)
+          message("Unfinished task subtype %20s : %d", subtaskID_names[i],
+                  unfinished_tasks[i + task_type_count]);
+      }
+      error("This is bad.");
+      break;
     }
-    for (int i = 0; i < task_subtype_count; i++) {
-      if (unfinished_subtypes[i] > 0)
-        message("Unfinished task subtype %20s : %d", subtaskID_names[i],
-                unfinished_subtypes[i]);
-    }
-    error("This is bad.");
   }
 }
 
@@ -2027,7 +2046,7 @@ void scheduler_end_launch(struct scheduler *s) {
 
   if (s->space->e->subcycle_rt) {
     /* For the RT subcycling, we need to manually keep track of the dependencies
-     * during the subcycling. Contrary to the normal dependencies, they don't
+     * during the subcycling. Contrary to the normal dependencies, they won't
      * get decreased when a task is being unlocked, so that we may reset the
      * correct number of dependencies during each cycle. Since the number of
      * dependencies may vary between two steps, it needs to be reset after the
@@ -2356,16 +2375,28 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
   /* Release whatever locks this task held. */
   if (!t->implicit) task_unlock(t);
 
+  /* if (t->type == task_type_rt_ghost1) message("CHECK FINISHED GHOST1 CELL %lld depth %d maxdepth %d", t->ci->cellID, t->ci->depth, t->ci->maxdepth); */
+
   /* Mark the task as skip. Do this before the enqueueing the next task:
    * race conditions may appear when using rescheduling/subcycling. */
   if (atomic_cas(&t->skip, 0, 1) != 0)
     error("Skipping an already skipped task");
 
+  /* if (t->ci->cellID == 27 && t->subtype == task_subtype_rt_gradient) message("Finished %s/%s", taskID_names[t->type], subtaskID_names[t->subtype]); */
+
   /* Loop through the dependencies and add them to a queue if
      they are ready. */
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
     struct task *t2 = t->unlock_tasks[k];
+    /* if (t->ci->cellID == 27 && t->type == task_type_rt_ghost1) message("Ghost1 unlocking %s/%s wait=%d skip=%d", taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
+    /* if (t->ci->cellID == 27 && t->subtype == task_subtype_rt_gradient) message("Unlocking %s/%s wait=%d skip=%d", taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
+    /* if (t2->ci->cellID == 27 && t2->type == task_type_rt_ghost2) message("%s/%s unlocking %s/%s wait=%d skip=%d",taskID_names[t->type], subtaskID_names[t->subtype], taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
     if (t2->skip) continue;
+
+    long long cellIDi = t2->ci->cellID;
+    long long cellIDj = -1;
+    if (t2->cj != NULL) cellIDj = t2->cj->cellID;
+    if (t->type == task_type_rt_ghost1) message("Ghost1 cell %lld unlocking %s/%s cells %lld %lld wait=%d skip=%d", t->ci->cellID, taskID_names[t2->type], subtaskID_names[t2->subtype], cellIDi, cellIDj, t2->wait, t2->skip);
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
