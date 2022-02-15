@@ -1556,6 +1556,12 @@ void runner_do_rt_ghost1(struct runner *r, struct cell *c, int timer) {
       }
     }
   } else {
+#ifdef SWIFT_RT_DEBUG
+    long long cellID = c->cellID;
+#else
+    long long cellID = -1;
+#endif
+    if (cellID == 1) message("Running rt_ghost1 cell %lld", cellID);
 
     for (int pid = 0; pid < count; pid++) {
       struct part *restrict p = &(c->hydro.parts[pid]);

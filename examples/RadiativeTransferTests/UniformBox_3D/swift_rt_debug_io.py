@@ -52,6 +52,8 @@ class RTGasData(object):
         self.RadiationAbsorbedTot = None
         self.InjectPrepCountsTot = None
 
+        self.NSubcycles = None
+
         return
 
 
@@ -209,6 +211,8 @@ def get_snap_data(prefix="output", skip_snap_zero=False, skip_last_snap=False):
         newsnap.gas.InjectPrepCountsTot = Gas["RTDebugStarsInjectPrepTotCounts"][:][
             inds
         ]
+
+        newsnap.gas.NSubcycles = Gas["RTDebugSubcycles"][:][inds]
 
         try:
             Stars = F["PartType4"]
