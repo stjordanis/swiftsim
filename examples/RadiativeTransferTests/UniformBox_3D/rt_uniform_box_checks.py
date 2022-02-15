@@ -73,7 +73,7 @@ def check_all_hydro_is_equal(snapdata):
 
     print("checking hydro")
 
-    for compare in snapdata[1:]:
+    for sind, compare in enumerate(snapdata[1:]):
 
         # Smoothing length ratios
         sml_diff = np.abs(1.0 - ref.gas.h / compare.gas.h)
@@ -130,6 +130,29 @@ def check_all_hydro_is_equal(snapdata):
 
             if break_on_diff:
                 quit()
+
+        # Photon number updates
+        if (ref.gas.NSubcycles != compare.gas.NSubcycles).any():
+            print("- Comparing hydro", ref.snapnr, "->", compare.snapnr)
+            print("--- Subcycles")
+
+            if print_diffs:
+                for i in range(npart):
+                    if ref.gas.NSubcycles[i] != compare.gas.NSubcycles[i]:
+                        print(
+                            "-----",
+                            ref.gas.IDs[i],
+                            ref.gas.NSubcycles[i],
+                            compare.gas.NSubcycles[i],
+                        )
+
+            if break_on_diff:
+                quit()
+
+        if sind == len(snapdata) - 2: # -2: we're not taking the full snapdata list
+            min_count = compare.gas.NSubcycles.min()
+            max_count = compare.gas.NSubcycles.max()
+            print("Subcycles: Min:", min_count, "Max:", max_count)
 
         # Gradient Loop Interaction Calls
         fishy = (

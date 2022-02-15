@@ -51,6 +51,8 @@ class RTGasData(object):
 
         self.RadiationAbsorbedTot = None
 
+        self.NSubcycles = None
+
         return
 
 
@@ -202,8 +204,10 @@ def get_snap_data(prefix="output", skip_snap_zero=False, skip_last_snap=False):
         newsnap.gas.ThermochemistryDone = Gas["RTDebugThermochemistryDone"][:][inds]
 
         newsnap.gas.RadiationAbsorbedTot = Gas["RTDebugRadAbsorbedTot"][:][inds]
+        newsnap.gas.NSubcycles = Gas["RTDebugSubcycles"][:][inds]
 
         has_stars = False
+
         try:
             Stars = F["PartType4"]
             ids = Stars["ParticleIDs"][:]

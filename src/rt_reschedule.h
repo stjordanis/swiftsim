@@ -41,6 +41,6 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
                                void *extra_data);
 void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
                                    void *extra_data);
-void rt_reschedule_particle_checks(struct part* restrict p);
+void rt_reschedule_particle_checks(struct part* restrict p, int rescheduled);
 
 #endif /* defined SWIFT_RT_RESCHEDULE_H */
