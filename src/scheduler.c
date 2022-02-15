@@ -1987,6 +1987,20 @@ void scheduler_start(struct scheduler *s) {
   pthread_mutex_unlock(&s->sleep_mutex);
 }
 
+void scheduler_check_all_tasks_finished_mapper(void *map_data, int num_elements, void *extra_data) {
+
+  struct task * tasks = (struct task*) map_data;
+  int *unfinished_tasks = (int *)extra_data;
+
+  for (int i = 0; i < num_elements; i++) {
+    struct task t = tasks[i];
+    if (t.skip == 0) {
+      atomic_inc(&unfinished_tasks[t.type]);
+      atomic_inc(&unfinished_tasks[task_type_count + t.subtype]);
+    }
+  }
+}
+
 /**
  * @brief Check that there are no tasks left with skip=0.
  *
@@ -1994,34 +2008,35 @@ void scheduler_start(struct scheduler *s) {
  */
 void scheduler_check_all_tasks_finished(struct scheduler *s) {
 
-  int unfinished_types[task_type_count];
-  bzero(unfinished_types, sizeof(int) * task_type_count);
-  int unfinished_subtypes[task_subtype_count];
-  bzero(unfinished_subtypes, sizeof(int) * task_subtype_count);
-  int unfinished = 0;
+  /* Concatenate task types and subtypes into single array. */
+  int unfinished_tasks[task_type_count + task_subtype_count];
+  bzero(unfinished_tasks, sizeof(int) * (task_type_count + task_subtype_count));
 
-  for (int i = 0; i < s->nr_tasks; i++) {
-    struct task t = s->tasks[i];
-    if (t.skip == 0) {
-      unfinished++;
-      unfinished_types[t.type]++;
-      unfinished_subtypes[t.subtype]++;
-    }
+  if (s->nr_tasks > 1000) {
+    message("Using Mapper");
+    threadpool_map(s->threadpool, scheduler_check_all_tasks_finished_mapper, s->tasks,
+                   s->nr_tasks, sizeof(struct task), threadpool_auto_chunk_size, unfinished_tasks);
+  } else {
+    scheduler_check_all_tasks_finished_mapper(s->tasks, s->nr_tasks, unfinished_tasks);
   }
 
-  if (unfinished) {
-    message("ERROR: Found tasks that haven't been done! Count=%d", unfinished);
-    for (int i = 0; i < task_type_count; i++) {
-      if (unfinished_types[i] > 0)
-        message("Unfinished task    type %20s : %d", taskID_names[i],
-                unfinished_types[i]);
+  for (int t = 0; t < task_type_count; t++) {
+
+    if (unfinished_tasks[t] > 0) {
+      message("ERROR: Found tasks that haven't been done!");
+      for (int i = 0; i < task_type_count; i++) {
+        if (unfinished_tasks[i] > 0)
+          message("Unfinished task    type %20s : %d", taskID_names[i],
+                  unfinished_tasks[i]);
+      }
+      for (int i = 0; i < task_subtype_count; i++) {
+        if (unfinished_tasks[i + task_type_count] > 0)
+          message("Unfinished task subtype %20s : %d", subtaskID_names[i],
+                  unfinished_tasks[i + task_type_count]);
+      }
+      error("This is bad.");
+      break;
     }
-    for (int i = 0; i < task_subtype_count; i++) {
-      if (unfinished_subtypes[i] > 0)
-        message("Unfinished task subtype %20s : %d", subtaskID_names[i],
-                unfinished_subtypes[i]);
-    }
-    error("This is bad.");
   }
 }
 
@@ -2035,7 +2050,7 @@ void scheduler_end_launch(struct scheduler *s) {
 
   if (s->space->e->subcycle_rt) {
     /* For the RT subcycling, we need to manually keep track of the dependencies
-     * during the subcycling. Contrary to the normal dependencies, they don't
+     * during the subcycling. Contrary to the normal dependencies, they won't
      * get decreased when a task is being unlocked, so that we may reset the
      * correct number of dependencies during each cycle. Since the number of
      * dependencies may vary between two steps, it needs to be reset after the

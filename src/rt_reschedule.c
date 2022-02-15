@@ -182,7 +182,7 @@ int rt_reschedule(struct runner *r, struct cell *c) {
      * timestep->wait as well. */
     struct task *timestep = c->timestep;
     if (timestep != NULL) atomic_inc(&timestep->wait);
-    if (cellID == 1) message("CellID %lld blocking timestep; wait = %d", cellID, rt_out->wait);
+    if (cellID == 1) message("CellID %lld blocking timestep; wait = %d", cellID, timestep->wait);
 
     return 1;
   }
