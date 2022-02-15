@@ -2367,8 +2367,8 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
-      error("Negative wait!");
-      /* error("Negative wait! %s/%s", taskID_names[t2->type], subtaskID_names[t2->subtype]); */
+      /* error("Negative wait!"); */
+      error("Negative wait! %s/%s wait=%d", taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait);
     } else if (res == 1) {
       scheduler_enqueue(s, t2);
     }
