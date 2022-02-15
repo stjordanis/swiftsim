@@ -100,8 +100,11 @@ INLINE static int rt_write_particles(const struct part* parts,
                                  rt_data.debug_iact_stars_inject_prep_tot,
                                  "Total interactions with stars during "
                                  "injection prep during its lifetime");
+  list[8] = io_make_output_field(
+      "RTDebugSubcycles", INT, 1, UNIT_CONV_NO_UNITS, 0, parts,
+      rt_data.debug_nsubcycles, "How many times this part was subcycled");
 
-  return 8;
+  return 9;
 }
 
 /**

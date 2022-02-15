@@ -1097,41 +1097,41 @@ int runner_do_rt_reschedule(struct runner *r, struct cell *c, int timer, int rec
   TIMER_TIC;
 
   if (c->cellID == 1) message("Cell %lld Called runner reschedule", c->cellID);
-  int res = 0;
-  if (!recurse) {
-    /* We don't recurse here. We stay at the level at which this
-     * task is being called, as we're not doing any actual work,
-     * and need to access the task pointers at the correct level. 
-     * Recursion is only used for debugging purposes. The first call
-     * to runner_do_rt_reschedule is always called with recurse = 0.*/
-    if (c->cellID == 1) message("Cell %lld Calling rt_reschedule", c->cellID);
-    res = rt_reschedule(r, c);
-  } 
+  int rescheduled = 0;
+  /* We don't recurse here. We stay at the level at which this
+   * task is being called, as we're not doing any actual work,
+   * and need to access the task pointers at the correct level. 
+   * Recursion is only used for debugging purposes. The first call
+   * to runner_do_rt_reschedule is always called with recurse = 0.*/
+  if (c->cellID == 1) message("Cell %lld Calling rt_reschedule depth=%d", c->cellID, recurse);
+  rescheduled = rt_reschedule(r, c);
 #ifdef SWIFT_RT_DEBUG_CHECKS
-    /* Recurse? */
-    if (c->split) {
-      for (int k = 0; k < 8; k++)
-        if (c->progeny[k] != NULL) runner_do_rt_reschedule(r, c->progeny[k], 0, /*recurse=*/1);
-    } else {
+  /* Recurse? */
+  if (c->split) {
+    for (int k = 0; k < 8; k++)
+      if (c->progeny[k] != NULL) runner_do_rt_reschedule(r, c->progeny[k], 0, /*recurse=*/recurse+1);
+  } else {
 
-      struct part *restrict parts = c->hydro.parts;
-      /* Loop over the gas particles in this cell. */
-      for (int k = 0; k < count; k++) {
+    /* Don't do this when we're done rescheduling so we can keep
+     * the debugging counters. */
+    struct part *restrict parts = c->hydro.parts;
+    /* Loop over the gas particles in this cell. */
+    for (int k = 0; k < count; k++) {
 
-        /* Get a handle on the part. */
-        struct part *restrict p = &parts[k];
+      /* Get a handle on the part. */
+      struct part *restrict p = &parts[k];
 
-        /* Skip inhibited parts */
-        if (part_is_inhibited(p, e)) continue;
+      /* Skip inhibited parts */
+      if (part_is_inhibited(p, e)) continue;
 
-        /* Skip inactive parts */
-        if (!part_is_active(p, e)) continue;
+      /* Skip inactive parts */
+      if (!part_is_active(p, e)) continue;
 
-        rt_reschedule_particle_checks(p);
-      }
+      rt_reschedule_particle_checks(p, rescheduled);
     }
+  }
 #endif
 
   if (timer) TIMER_TOC(timer_rt_reschedule);
-  return res;
+  return rescheduled;
 }
