@@ -1997,6 +1997,11 @@ void scheduler_check_all_tasks_finished_mapper(void *map_data, int num_elements,
     if (t.skip == 0) {
       atomic_inc(&unfinished_tasks[t.type]);
       atomic_inc(&unfinished_tasks[task_type_count + t.subtype]);
+      if (t.type == task_type_rt_ghost2) message("Caught rt_ghost2 cell %lld cycles %d", t.ci->cellID, t.ci->hydro.rt_cycle);
+    /*   if (t.subtype == task_subtype_rt_gradient) { */
+    /*     if (t.cj == NULL) message("Caught rt_gradient self cell %lld", t.ci->cellID); */
+    /*     else message("Caught rt_gradient self cells %lld %lld | depth %d %d | maxdepth %d %d", t.ci->cellID, t.cj->cellID, t.ci->depth, t.cj->depth, t.ci->maxdepth, t.cj->maxdepth); */
+    /*   } */
     }
   }
 }
@@ -2013,7 +2018,6 @@ void scheduler_check_all_tasks_finished(struct scheduler *s) {
   bzero(unfinished_tasks, sizeof(int) * (task_type_count + task_subtype_count));
 
   if (s->nr_tasks > 1000) {
-    message("Using Mapper");
     threadpool_map(s->threadpool, scheduler_check_all_tasks_finished_mapper, s->tasks,
                    s->nr_tasks, sizeof(struct task), threadpool_auto_chunk_size, unfinished_tasks);
   } else {
@@ -2375,16 +2379,28 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
   /* Release whatever locks this task held. */
   if (!t->implicit) task_unlock(t);
 
+  /* if (t->type == task_type_rt_ghost1) message("CHECK FINISHED GHOST1 CELL %lld depth %d maxdepth %d", t->ci->cellID, t->ci->depth, t->ci->maxdepth); */
+
   /* Mark the task as skip. Do this before the enqueueing the next task:
    * race conditions may appear when using rescheduling/subcycling. */
   if (atomic_cas(&t->skip, 0, 1) != 0)
     error("Skipping an already skipped task");
 
+  /* if (t->ci->cellID == 27 && t->subtype == task_subtype_rt_gradient) message("Finished %s/%s", taskID_names[t->type], subtaskID_names[t->subtype]); */
+
   /* Loop through the dependencies and add them to a queue if
      they are ready. */
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
     struct task *t2 = t->unlock_tasks[k];
+    /* if (t->ci->cellID == 27 && t->type == task_type_rt_ghost1) message("Ghost1 unlocking %s/%s wait=%d skip=%d", taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
+    /* if (t->ci->cellID == 27 && t->subtype == task_subtype_rt_gradient) message("Unlocking %s/%s wait=%d skip=%d", taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
+    /* if (t2->ci->cellID == 27 && t2->type == task_type_rt_ghost2) message("%s/%s unlocking %s/%s wait=%d skip=%d",taskID_names[t->type], subtaskID_names[t->subtype], taskID_names[t2->type], subtaskID_names[t2->subtype], t2->wait, t2->skip); */
     if (t2->skip) continue;
+
+    long long cellIDi = t2->ci->cellID;
+    long long cellIDj = -1;
+    if (t2->cj != NULL) cellIDj = t2->cj->cellID;
+    if (t->type == task_type_rt_ghost1) message("Ghost1 cell %lld unlocking %s/%s cells %lld %lld wait=%d skip=%d", t->ci->cellID, taskID_names[t2->type], subtaskID_names[t2->subtype], cellIDi, cellIDj, t2->wait, t2->skip);
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
