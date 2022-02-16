@@ -305,6 +305,28 @@ struct part {
 
   /* sum w_ij*/
   float sum_wij;
+  
+  /* General Imbalance statistic */
+  float I_general;
+  
+  /*! Sum of m/rho r_ij W (used to compute general imbalance statistic)*/
+  float sum_rij_over_rho[3];
+  
+  /*! Sum of m/rho W (used to compute general imbalance statistic)*/
+  float sum_over_rho;
+  
+  /* Gradient of rho i.e. sum of m grad_W */
+  float grad_rho[3];
+  
+  /* Aux Imbalance statistic i.r. assume rho_b in the sum is constant rho_a*/
+  float I_aux;
+  
+  /*! Weighted mean pressure using I_aux*/
+  float sum_wij_exp_P_aux;
+
+  /*! Sum of W_ij * exp(-I_auxj) for rho_new */
+  float sum_wij_exp_aux;
+  
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION
@@ -333,6 +355,9 @@ struct part {
     
   /*! Inverse matrix method flag */
   int is_h_max;
+  
+  /*! Last step's corrected rho */
+  float last_correct_rho;
 #endif
 
 } SWIFT_STRUCT_ALIGN;

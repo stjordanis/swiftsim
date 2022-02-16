@@ -154,6 +154,15 @@ __attribute__((always_inline)) INLINE static void runner_iact_density(
   pj->sum_rij[1] += -dx[1]*wj*mi;
   pj->sum_rij[2] += -dx[2]*wj*mi;
   }
+  
+  pi->grad_rho[0] += dx[0]*wi_dx*r_inv*mj;
+  pi->grad_rho[1] += dx[1]*wi_dx*r_inv*mj;
+  pi->grad_rho[2] += dx[2]*wi_dx*r_inv*mj;
+
+  pj->grad_rho[0] += -dx[0]*wj_dx*r_inv*mi;
+  pj->grad_rho[1] += -dx[1]*wj_dx*r_inv*mi;
+  pj->grad_rho[2] += -dx[2]*wj_dx*r_inv*mi;
+
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION
@@ -272,6 +281,10 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_density(
   pi->sum_rij[1] += dx[1]*wi*mj;
   pi->sum_rij[2] += dx[2]*wi*mj;
   }
+  
+  pi->grad_rho[0] += dx[0]*wi_dx*r_inv*mj;
+  pi->grad_rho[1] += dx[1]*wi_dx*r_inv*mj;
+  pi->grad_rho[2] += dx[2]*wi_dx*r_inv*mj;
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION   
@@ -333,8 +346,8 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   kernel_deval(uj, &wj, &wj_dx);
 
   /* Correction factors for kernel gradients */ 
-  const float rho_inv_i = 1.f / pi->rho;
-  const float rho_inv_j = 1.f / pj->rho;
+  float rho_inv_i = 1.f / pi->rho;
+  float rho_inv_j = 1.f / pj->rho;
   
   pi->weighted_wcount += pj->mass * r2 * wi_dx * r_inv;
   pj->weighted_wcount += pi->mass * r2 * wj_dx * r_inv;
@@ -351,9 +364,39 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pj->sum_wij_exp += wj * expf(-pi->I*pi->I);
   pj->sum_wij_exp_P += pi->P * wj * expf(-pi->I*pi->I);
   pj->sum_wij_exp_T += pi->T * wj * expf(-pi->I*pi->I);
+  
+  pi->sum_rij_over_rho[0] += -dx[0]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[1] += -dx[1]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[2] += -dx[2]*wi*pj->mass*rho_inv_j;
+
+  pj->sum_rij_over_rho[0] += dx[0]*wj*pi->mass*rho_inv_i;
+  pj->sum_rij_over_rho[1] += dx[1]*wj*pi->mass*rho_inv_i;
+  pj->sum_rij_over_rho[2] += dx[2]*wj*pi->mass*rho_inv_i;
+  
+  
+  pi->sum_over_rho += wi*pj->mass*rho_inv_j;
+  
+  pj->sum_over_rho += wj*pi->mass*rho_inv_i;
+  
+  // General I
+  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux);
+  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux);
+  
+  pi->sum_wij_exp_P_aux += pi->P * wj * expf(-pi->I_aux*pi->I_aux);
+  pi->sum_wij_exp_aux += wj * expf(-pi->I_aux*pi->I_aux);
+  
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION
+	
+  
+  if(pi->last_correct_rho){
+  	rho_inv_i = 1.f / (expf(-pi->I_aux*pi->I_aux)*pi->rho + (1-expf(-pi->I_aux*pi->I_aux))*pi->last_correct_rho);
+  }
+  if(pj->last_correct_rho){
+  	rho_inv_j = 1.f / (expf(-pj->I_aux*pj->I_aux)*pj->rho + (1-expf(-pj->I_aux*pj->I_aux))*pj->last_correct_rho);
+  }
+  
     int i,j,k;
     for (i = 0; i < 3; ++i) {
       for (j = 0; j < 3; ++j) {
@@ -423,7 +466,7 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
 
   /* Correction factors for kernel gradients */ 
 
-  const float rho_inv_j = 1.f / pj->rho;
+  float rho_inv_j = 1.f / pj->rho;
 
   pi->weighted_wcount += pj->mass * r2 * wi_dx * r_inv;
   pi->weighted_neighbour_wcount += pj->mass * r2 * wi_dx * rho_inv_j * r_inv;
@@ -433,9 +476,24 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
   pi->sum_wij_exp += wi * expf(-pj->I*pj->I);
   pi->sum_wij_exp_P += pj->P * wi * expf(-pj->I*pj->I);
   pi->sum_wij_exp_T += pj->T * wi * expf(-pj->I*pj->I);
+  
+  pi->sum_rij_over_rho[0] += -dx[0]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[1] += -dx[1]*wi*pj->mass*rho_inv_j;
+  pi->sum_rij_over_rho[2] += -dx[2]*wi*pj->mass*rho_inv_j;
+  
+  pi->sum_over_rho += wi*pj->mass*rho_inv_j;
+  
+  // General I
+  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux);
+  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux);
 #endif
     
-#ifdef PLANETARY_MATRIX_INVERSION   
+#ifdef PLANETARY_MATRIX_INVERSION  
+
+  if(pj->last_correct_rho){
+  	rho_inv_j = 1.f / (expf(-pj->I_aux*pj->I_aux)*pj->rho + (1-expf(-pj->I_aux*pj->I_aux))*pj->last_correct_rho);
+  }
+  
     int i,j,k;
     for (i = 0; i < 3; ++i) { 
       for (j = 0; j < 3; ++j) {

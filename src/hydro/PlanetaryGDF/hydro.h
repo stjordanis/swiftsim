@@ -512,6 +512,9 @@ __attribute__((always_inline)) INLINE static void hydro_init_part(
   p->sum_rij[2] = 0.f;
   p->I = 0.f;
   p->sum_wij = 0.f;
+  p->grad_rho[0] = 0.f;
+  p->grad_rho[1] = 0.f;
+  p->grad_rho[2] = 0.f;
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION
@@ -597,6 +600,22 @@ __attribute__((always_inline)) INLINE static void hydro_end_density(
   const float alpha = 5.1f;  // eta=2.2
 #endif
   p->I *= alpha;
+  
+  p->grad_rho[0] *= h_inv_dim_plus_one;
+  p->grad_rho[1] *= h_inv_dim_plus_one;
+  p->grad_rho[2] *= h_inv_dim_plus_one;
+  
+  p->sum_rij[0] *= h_inv_dim;
+  p->sum_rij[1] *= h_inv_dim;
+  p->sum_rij[2] *= h_inv_dim;
+  
+   
+  //NOTE: extra rho on denominator from assuming all rho_b are rho_a
+   p->I_aux = (p->grad_rho[0]*p->sum_rij[0] + p->grad_rho[1]*p->sum_rij[1] + p->grad_rho[2]*p->sum_rij[2]) / p->rho / p->rho;
+  
+  //NOTE: better to put factor in exponential rather than in I 
+  p->I_aux = 69.f*fabs(p->I);   
+ 
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION 
@@ -733,6 +752,16 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_gradient(
     //if (p->h < 0.999f * hydro_props->h_max){
     //      p->imbalance_flag = 1;
     //}
+    
+  p->sum_rij_over_rho[0] = 0.f;
+  p->sum_rij_over_rho[1] = 0.f;
+  p->sum_rij_over_rho[2] = 0.f;
+  
+  p->sum_over_rho = 0.f;
+  
+  p->sum_wij_exp_P_aux = 0.f;
+  p->sum_wij_exp_aux = 0.f;
+  
   
 #endif
     
@@ -809,21 +838,70 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
     //Added this to see if it fixes issue:
     //if (p->imbalance_flag == 1) {
     
+    
+  p->sum_rij_over_rho[0] *= h_inv_dim;
+  p->sum_rij_over_rho[1] *= h_inv_dim;
+  p->sum_rij_over_rho[2] *= h_inv_dim;
+  
+  p->sum_over_rho += kernel_root * p->mass / p->rho;
+  p->sum_over_rho *= h_inv_dim;
+  
+  //p->I_general = (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho;
+  //p->I_general = sqrt(p->sum_rij_over_rho[0]*p->sum_rij_over_rho[0] + p->sum_rij_over_rho[1]*p->sum_rij_over_rho[1] + p->sum_rij_over_rho[2]*p->sum_rij_over_rho[2]) / p->sum_over_rho;
+  
+  
+  
+  p->I_general = (1.f + (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho) / p->sum_over_rho - 1.f;
+  
+  //NOTE: better to put factor in exponential rather than in I 
+  p->I_general = 69.f*fabs(p->I_general); //10000.f*fabs(p->I_general);   
+    
+ 
+  
+  float P_tilde_general = p->sum_wij_exp_P_aux / p->sum_wij_exp_aux;
+    
+  // temp 
+  p->I = p->I_general;
+  
+  
+    
   /* Bullet proof */
   if (p->sum_wij_exp > 0.f && p->sum_wij_exp_P > 0.f && p->sum_wij_exp_T > 0.f && p->I > 0.f){
 	  /* End computation */
-	  p->sum_wij_exp_P /= p->sum_wij_exp;
-	  p->sum_wij_exp_T /= p->sum_wij_exp;
+	  //p->sum_wij_exp_P /= p->sum_wij_exp;
+	  //p->sum_wij_exp_T /= p->sum_wij_exp;
 	  
 	  /* Compute new P */ 
-	  float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_P;
+	  float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*P_tilde_general;//p->sum_wij_exp_P;
 
-    /* Compute new T */
-	  float T_new = expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
+    	  /* Compute new T */
+	  //float T_new = expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
           
 	  /* Compute new density */
-	  float rho_new =
-	      gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
+	  //float rho_new =
+	    //  gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
+   
+   
+	  // iterate a few times
+	  float T_new;
+	  int i;
+	  float rho_new = p->rho;
+	  
+	  //if(I>1.f){
+	  //	printf("%f",p->P);
+	  //	printf("\n");
+	  //	printf("%f",P_new);
+	  //	printf("\n");
+	  //}
+	  
+	  
+	  for(i=0;i<30;i++){
+	  	T_new = gas_temperature_from_internal_energy(rho_new, p->u, p->mat_id);
+	  	rho_new = gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
+	  } 
+   
+	   
+	   
    
 	  /* Ensure new density is not lower than minimum SPH density */
 	  if (rho_new < rho_min){
@@ -842,10 +920,13 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
     p->T = T;
   }
 
-  
     
 #endif
-    
+  
+  
+#ifdef PLANETARY_IMBALANCE
+  p->last_correct_rho = p->rho;
+#endif  
      
 }
 
