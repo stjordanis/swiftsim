@@ -851,7 +851,12 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
   
   
   
-  p->I_general = (1.f + (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho) / p->sum_over_rho - 1.f;
+  //p->I_general = (1.f + (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho) / p->sum_over_rho - 1.f;
+  
+  
+  //p->I_general = (1.f - (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / (p->rho + (p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2])) ) / p->sum_over_rho - 1.f;
+  
+  p->I_general = fabs(p->sum_over_rho - 1.f) + fabs((p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho);
   
   //NOTE: better to put factor in exponential rather than in I 
   p->I_general = 69.f*fabs(p->I_general); //10000.f*fabs(p->I_general);   
