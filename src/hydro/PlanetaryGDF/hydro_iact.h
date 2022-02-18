@@ -377,13 +377,13 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pi->sum_over_rho += wi*pj->mass*rho_inv_j;
   
   pj->sum_over_rho += wj*pi->mass*rho_inv_i;
-  
+    
   // General I
-  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux);
-  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux);
+  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux) * pj->mass * rho_inv_j;
+  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux) * pj->mass * rho_inv_j;
   
-  pi->sum_wij_exp_P_aux += pi->P * wj * expf(-pi->I_aux*pi->I_aux);
-  pi->sum_wij_exp_aux += wj * expf(-pi->I_aux*pi->I_aux);
+  pj->sum_wij_exp_P_aux += pi->P * wj * expf(-pi->I_aux*pi->I_aux) * pi->mass * rho_inv_i;
+  pj->sum_wij_exp_aux += wj * expf(-pi->I_aux*pi->I_aux) * pi->mass * rho_inv_i;
   
 #endif
     
@@ -483,9 +483,12 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
   
   pi->sum_over_rho += wi*pj->mass*rho_inv_j;
   
+
   // General I
-  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux);
-  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux);
+  pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux) * pj->mass * rho_inv_j;
+  pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux) * pj->mass * rho_inv_j;
+
+  
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION  
