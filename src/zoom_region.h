@@ -6,9 +6,8 @@
 #define SWIFT_ZOOM_H
 
 void zoom_region_init(struct swift_params *params, struct space *s);
-int cell_getid_zoom(const int cdim[3], const double x, const double y,
-                    const double z, const struct space *s,
-                    const int i, const int j, const int k);
+int cell_getid_zoom(const struct space *s, const double x, const double y,
+                    const double z);
 void construct_zoom_region(struct space *s, int verbose);
 void construct_tl_cells_with_zoom_region(struct space *s, const int *cdim, const float dmin, 
         const integertime_t ti_current, struct gravity_props *gravity_properties, int verbose);
@@ -36,6 +35,8 @@ void engine_make_hydroloop_tasks_mapper_with_zoom(void *map_data, int num_elemen
                                                   void *extra_data);
 void engine_make_fofloop_tasks_mapper_with_zoom(void *map_data, int num_elements,
                                                 void *extra_data);
+int partition_space_to_space_zoom(double *oldh, double *oldcdim, double *oldzoomh,
+		                              double *oldzoomcdim, int *oldnodeIDs, struct space *s);
 void pick_vector_zoom(struct space *s, int nregions, int *samplecells);
 void split_vector_zoom(struct space *s, int nregions, int *samplecells);
 

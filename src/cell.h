@@ -665,6 +665,44 @@ int cell_can_use_pair_mm(const struct cell *ci, const struct cell *cj,
                          const int use_rebuild_data, const int is_tree_walk);
 
 /**
+ * @brief Convert cell location to ID using a position.
+ *
+ * @param s The space.
+ * @param x, y, z Coordinates of particle/cell.
+ */
+__attribute__((always_inline)) INLINE int cell_getid_pos(const struct space *s,
+		                                                     const double x, const double y,
+                                                         const double z) {
+
+	/* Define variable to output */
+	int cell_id;
+
+#ifdef WITH_ZOOM_REGION
+	if (s->with_zoom_region) {
+
+	  /* Use the version that accounts for the zoom region */
+	  cell_id = cell_getid_zoom(s, x, y, z);
+
+	} else {
+
+		/* Zoom region isn't enabled so we can use the simple version */
+		const int i = x * s->iwidth[0];
+		const int j = y * s->iwidth[1];
+		const int k = z * s->iwidth[2];
+		cell_id = cell_getid(s->cdim, i, j, k);
+
+	}
+#else
+	/* Not compiled with zoom regions so we can use the simple version */
+	const int i = x * s->iwidth[0];
+	const int j = y * s->iwidth[1];
+	const int k = z * s->iwidth[2];
+	cell_id = cell_getid(s->cdim, i, j, k);
+#endif
+	return cell_id;
+}
+
+/**
  * @brief Compute the square of the minimal distance between any two points in
  * two cells of the same size
  *
@@ -678,9 +716,12 @@ __attribute__((always_inline)) INLINE static double cell_min_dist2_same_size(
     const int periodic, const double dim[3]) {
 
 #ifdef SWIFT_DEBUG_CHECKS
-  if (ci->width[0] != cj->width[0]) error("x cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])", ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
-  if (ci->width[1] != cj->width[1]) error("y cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])", ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
-  if (ci->width[2] != cj->width[2]) error("z cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])", ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
+  if (ci->width[0] != cj->width[0]) error("x cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])",
+  		ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
+  if (ci->width[1] != cj->width[1]) error("y cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])",
+  		ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
+  if (ci->width[2] != cj->width[2]) error("z cells of different size! (ci->width=[%f %f %f] cj->width=[%f %f %f])",
+  		ci->width[0], ci->width[1], ci->width[2], cj->width[0], cj->width[1], cj->width[2]);
 #endif
 
   const double cix_min = ci->loc[0];
@@ -1347,15 +1388,14 @@ __attribute__((always_inline)) INLINE void cell_assign_top_level_cell_index(
 
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
 
-	/* Get some information from the space */
-	const int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
-	const double iwidth[3] = {s->iwidth[0], s->iwidth[1], s->iwidth[2]};
-
   if (c->depth != 0) {
     error("assigning top level cell index to cell with depth > 0");
   } else {
 
 #ifdef WITH_ZOOM_REGION
+
+  	/* Get some information from the space */
+	  const int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
 
   	/* Get some zoom information from the space */
 		const int zoom_cdim[3] = {s->zoom_props->cdim[0], s->zoom_props->cdim[1], s->zoom_props->cdim[2]};
@@ -1372,14 +1412,16 @@ __attribute__((always_inline)) INLINE void cell_assign_top_level_cell_index(
       /* Do this in same line. Otherwise, bad things happen. */
       c->cellID = atomic_inc(&last_cell_id);
     } else {
-      int i = (int)(c->loc[0] * iwidth[0] + 0.5);
-      int j = (int)(c->loc[1] * iwidth[1] + 0.5);
-      int k = (int)(c->loc[2] * iwidth[2] + 0.5);
-      c->cellID = (unsigned long long)(cell_getid_zoom(cdim, c->loc[0], c->loc[1], c->loc[2], s, i, j, k) + 1);
+      c->cellID = (unsigned long long)(cell_getid_pos(s, c->loc[0], c->loc[1], c->loc[2]));
     }
     /* in both cases, keep track of first prodigy index */
     atomic_inc(&last_leaf_cell_id);
 #else
+
+    /* Get some information from the space */
+	  const int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
+    const double iwidth[3] = {s->iwidth[0], s->iwidth[1], s->iwidth[2]};
+
     if (cdim[0] * cdim[1] * cdim[2] > 32 * 32 * 32) {
     	      /* print warning only once */
       if (last_cell_id == 1ULL) {

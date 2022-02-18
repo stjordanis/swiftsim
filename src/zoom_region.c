@@ -74,58 +74,60 @@ void zoom_region_init(struct swift_params *params, struct space *s) {
  * 
  * First see if the particle is within the zoom bounds, then find its TL cell. 
  *
- * @param cdim Cell dimentions of the TL grid (same for natural TL and zoom grid).
- * @param x, y, z Location of particle.
- * @param i, j, k Location of particle in the natural grid [0, cdim].
  * @param s The space.
+ * @param x, y, z Location of particle.
  */
-int cell_getid_zoom(const int cdim[3], const double x, const double y,
-                    const double z, const struct space *s,
-                    const int i, const int j, const int k) {
+int cell_getid_zoom(const struct space *s, const double x, const double y,
+                    const double z) {
 #ifdef WITH_ZOOM_REGION
   int cell_id;
 
-  if (s->with_zoom_region) {
+  /* Lets get some space information */
+  const int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
+  const double iwidth[3] = {s->iwidth[0], s->iwidth[1], s->iwidth[2]};
 
-    /* Properties of the zoom region. */
-    const struct zoom_region_properties *zoom_props = s->zoom_props;
-    const int bkg_cell_offset = zoom_props->tl_cell_offset;
-    const double zoom_region_bounds[6] = {
-        zoom_props->region_bounds[0], zoom_props->region_bounds[1],
-        zoom_props->region_bounds[2], zoom_props->region_bounds[3],
-        zoom_props->region_bounds[4], zoom_props->region_bounds[5]};
-    const double ih_x_zoom = zoom_props->iwidth[0];
-    const double ih_y_zoom = zoom_props->iwidth[1];
-    const double ih_z_zoom = zoom_props->iwidth[2];
-    const int zoom_cdim[3] = {s->zoom_props->cdim[0], s->zoom_props->cdim[1], s->zoom_props->cdim[2]};
+  /* Lets get some properties of the zoom region. */
+  const struct zoom_region_properties *zoom_props = s->zoom_props;
+  const int zoom_cdim[3] = {zoom_props->cdim[0], zoom_props->cdim[1], zoom_props->cdim[2]};
+  const double zoom_iwidth[3] = {zoom_props->iwidth[0], zoom_props->iwidth[1], zoom_props->iwidth[2]};
+  const int bkg_cell_offset = zoom_props->tl_cell_offset;
+  const double zoom_region_bounds[6] = {zoom_props->region_bounds[0], zoom_props->region_bounds[1],
+																				zoom_props->region_bounds[2], zoom_props->region_bounds[3],
+																				zoom_props->region_bounds[4], zoom_props->region_bounds[5]};
 
-    /* Are the passed coordinates within the zoom region? */
-    if (x >= zoom_region_bounds[0] && x < zoom_region_bounds[1] &&
-        y >= zoom_region_bounds[2] && y < zoom_region_bounds[3] &&
-        z >= zoom_region_bounds[4] && z < zoom_region_bounds[5]) {
-    
-      /* Which zoom TL cell are we in? */
-      const int zoom_i = (x - zoom_region_bounds[0]) * ih_x_zoom;
-      const int zoom_j = (y - zoom_region_bounds[2]) * ih_y_zoom;
-      const int zoom_k = (z - zoom_region_bounds[4]) * ih_z_zoom;
-      cell_id = cell_getid(zoom_cdim, zoom_i, zoom_j, zoom_k);
+  /* Are the passed coordinates within the zoom region? */
+  if (x >= zoom_region_bounds[0] && x < zoom_region_bounds[1] &&
+      y >= zoom_region_bounds[2] && y < zoom_region_bounds[3] &&
+      z >= zoom_region_bounds[4] && z < zoom_region_bounds[5]) {
+
+    /* Which zoom TL cell are we in? */
+    const int zoom_i = (x - zoom_region_bounds[0]) * zoom_iwidth[0];
+    const int zoom_j = (y - zoom_region_bounds[2]) * zoom_iwidth[1];
+    const int zoom_k = (z - zoom_region_bounds[4]) * zoom_iwidth[2];
+    cell_id = cell_getid(zoom_cdim, zoom_i, zoom_j, zoom_k);
 
 #ifdef SWIFT_DEBUG_CHECKS
-      if (cell_id < 0 || cell_id >= zoom_cdim[0] * zoom_cdim[1] * zoom_cdim[2])
-        error("cell_id out of range: %i (%f %f %f)", cell_id, x, y, z);
+    if (cell_id < 0 || cell_id >= zoom_cdim[0] * zoom_cdim[1] * zoom_cdim[2])
+      error("cell_id out of range: %i (%f %f %f)", cell_id, x, y, z);
 #endif
-    /* If not then treat it like normal, and find the natural TL cell. */
-    } else {
-        cell_id = cell_getid(cdim, i, j, k) + bkg_cell_offset;
-    }
-  /* Normal non-zoom-region case. */
+
+  /* If not then treat it like normal, and find the natural TL cell. */
   } else {
-    cell_id = cell_getid(cdim, i, j, k);
+    const int i = x * iwidth[0];
+    const int j = y * iwidth[1];
+    const int k = z * iwidth[2];
+    cell_id = cell_getid(cdim, i, j, k) + bkg_cell_offset;
+
+#ifdef SWIFT_DEBUG_CHECKS
+    if (cell_id < bkg_cell_offset || cell_id >= s->nr_cells)
+      error("cell_id out of range: %i (%f %f %f)", cell_id, x, y, z);
+#endif
+
   }
 
   return cell_id;
 #else
-  return 0;
+  error("Using cell_getid_zoom but compiled without zoom regions enabled!");
 #endif
 }
 
@@ -311,7 +313,6 @@ void construct_zoom_region(struct space *s, int verbose) {
     const double mid_point = (cent_cell_ijk * s->width[ijk]) + (s->width[ijk] / 2);
 	
   	/* Find the bounding cells */
-//  	const double width = (new_zoom_boundary[(ijk * 2) + 1] - new_zoom_boundary[ijk * 2]) * zoom_boost_factor;
 		const int ijk_low_bound = (mid_point - (max_width / 2)) * s->iwidth[ijk];
 		const int ijk_up_bound = (mid_point + (max_width / 2)) * s->iwidth[ijk];
 
@@ -323,35 +324,6 @@ void construct_zoom_region(struct space *s, int verbose) {
     new_zoom_boundary[(ijk * 2) + 1] = (ijk_up_bound + 1) * s->width[ijk];
 
   }
-
-//  /* Find the new zoom region bounds for equal widths on all axes based on this maximum,
-//   * centred on the central natural cell and with the zoom boundaries on natural cell boundaries */
-//  for (int ijk = 0; ijk < 3; ijk++) {
-//  	const int cent_cell_ijk = (int)(s->zoom_props->com[ijk] * s->iwidth[ijk]);
-//    const double mid_point = (cent_cell_ijk * s->width[ijk]) + (s->width[ijk] / 2);
-//
-//		/* We have to ensure this mid point results in zoom boundaires at natural cell boundaries */
-//		const int ini_low_zoom_boundary = (int)((mid_point - (max_width / 2)) * s->iwidth[ijk]);
-//		const int ini_up_zoom_boundary = (int)((mid_point + (max_width / 2)) * s->iwidth[ijk]);
-//
-//		/* Use this integer cell coordinate to define lower boundary */
-//    new_zoom_boundary[ijk * 2] = ini_low_zoom_boundary * s->width[ijk];
-//
-//		/* If the upper boundary lies inside a natural cell we need to add the width of a natual cell,
-//		 * if it's at the boundary we do not */
-//		if ((int)((mid_point + (max_width / 2)) * s->iwidth[ijk]) == ((mid_point + (max_width / 2)) * s->iwidth[ijk])) {
-//
-//			/* Use this integer cell coordinate to define upper boundary */
-//	    new_zoom_boundary[(ijk * 2) + 1] = ini_up_zoom_boundary * s->width[ijk];
-//
-//		} else {
-//
-//			/* Use this integer cell coordinate to define upper boundary with an extra natural cell width */
-//	    new_zoom_boundary[(ijk * 2) + 1] = (ini_up_zoom_boundary * s->width[ijk]) + s->width[ijk];
-//
-//		}
-//
-//  }
 
   /* If this process has pushed the zoom region outside the bounds
    * of the box we need to stop and shift the ICs to avoid having
@@ -386,8 +358,9 @@ void construct_zoom_region(struct space *s, int verbose) {
   s->zoom_props->nr_bkg_cells = s->cdim[0] * s->cdim[1] * s->cdim[2];
 
   if (verbose) {
-  	message("zoom_cdim: [%d %d %d]", s->zoom_props->cdim[0],
-  			    s->zoom_props->cdim[1], s->zoom_props->cdim[2]);
+  	message("set cell dimensions to zoom_cdim=[%d %d %d] background_cdim=[%d %d %d]", s->zoom_props->cdim[0],
+  			    s->zoom_props->cdim[1], s->zoom_props->cdim[2], s->cdim[0],
+  			    s->cdim[1], s->cdim[2]);
   	message("nr_zoom_cells: %d nr_bkg_cells: %d tl_cell_offset: %d", s->zoom_props->nr_zoom_cells,
   			    s->zoom_props->nr_bkg_cells, s->zoom_props->tl_cell_offset);
   	message("zoom_boundary: [%f-%f %f-%f %f-%f]",
@@ -448,8 +421,7 @@ void construct_tl_cells_with_zoom_region(struct space *s, const int *cdim, const
 	      c->loc[0] = i * s->zoom_props->width[0] + zoom_region_bounds[0];
 	      c->loc[1] = j * s->zoom_props->width[1] + zoom_region_bounds[2];
 	      c->loc[2] = k * s->zoom_props->width[2] + zoom_region_bounds[4];
-	      c->parent_tl_cid = cell_getid(cdim, (int)(c->loc[0] * s->iwidth[0]),
-	          (int)(c->loc[1] * s->iwidth[1]), (int)(c->loc[2] * s->iwidth[2]));
+	      c->parent_tl_cid = cell_getid_pos(s, c->loc[0], c->loc[1], c->loc[2]);
 	      c->width[0] = s->zoom_props->width[0];
 	      c->width[1] = s->zoom_props->width[1];
 	      c->width[2] = s->zoom_props->width[2];
@@ -595,6 +567,13 @@ void find_neighbouring_cells(struct space *s, struct gravity_props *gravity_prop
 
   int neighbour_count = 0;
   int void_count = 0;
+
+  /* Let's be verbose about this choice */
+  if (verbose)
+    message(
+        "Looking for neighbouring natural cells up to %d natural top-level cells away from the zoom region (delta_m=%d "
+        "delta_p=%d)",
+        delta_cells, delta_m, delta_p);
 
   /* Loop over each cell in the space to find the neighbouring top level cells
    * surrounding the zoom region. */
@@ -1881,11 +1860,11 @@ void engine_make_self_gravity_tasks_mapper_with_zoom_diffsize(void *map_data,
 		/* Skip cells without gravity particles */
 		if (ci->grav.count == 0) continue;
 
-//		/* If the cell is a natural cell and not a neighbour cell
-//		 * we don't need to do anything */
-//		if ((ci->tl_cell_type <= 2) && (ci->tl_cell_type != tl_cell_neighbour)) {
-//			continue;
-//		}
+		/* If the cell is a natural cell and not a neighbour cell
+		 * we don't need to do anything */
+		if ((ci->tl_cell_type <= 2) && (ci->tl_cell_type != tl_cell_neighbour)) {
+			continue;
+		}
 
 		/* Get the loop range for the neighbouring cells */
 		if (ci->tl_cell_type <= 2) {
@@ -1902,10 +1881,10 @@ void engine_make_self_gravity_tasks_mapper_with_zoom_diffsize(void *map_data,
 			/* Get the cell */
 			struct cell *cj = &cells[cjd];
 
-//			/* Skip non-neighbour natural cells. */
-//			if (cj->tl_cell_type != tl_cell_neighbour){
-//				continue;
-//			}
+			/* Skip non-neighbour natural cells. */
+			if (cj->tl_cell_type != tl_cell_neighbour){
+				continue;
+			}
 
 			/* Avoid empty cells and completely foreign pairs */
 			if (cj->grav.count == 0 || (ci->nodeID != nodeID && cj->nodeID != nodeID))
