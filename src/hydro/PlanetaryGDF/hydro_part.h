@@ -327,6 +327,9 @@ struct part {
   /*! Sum of W_ij * exp(-I_auxj) for rho_new */
   float sum_wij_exp_aux;
   
+/* Gradient of P i.e. sum of m/rho P grad_W */
+  float grad_P[3];
+  
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION
