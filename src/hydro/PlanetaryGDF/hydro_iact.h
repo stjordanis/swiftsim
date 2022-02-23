@@ -390,6 +390,15 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pj->sum_wij_exp_P_aux += pi->P * wj * expf(-pi->I_aux*pi->I_aux);
   pj->sum_wij_exp_aux += wj * expf(-pi->I_aux*pi->I_aux);
   
+
+  //pi->sum_wij_exp_P_aux += pj->P * expf(-pj->I_aux*pj->I_aux);
+  //pi->sum_wij_exp_aux += expf(-pj->I_aux*pj->I_aux);
+  
+  //pj->sum_wij_exp_P_aux += pi->P * expf(-pi->I_aux*pi->I_aux);
+  //pj->sum_wij_exp_aux +=  expf(-pi->I_aux*pi->I_aux);
+    
+    
+    
   
   pi->grad_P[0] += dx[0]*wi_dx*r_inv*mj*rho_inv_j*pj->P;
   pi->grad_P[1] += dx[1]*wi_dx*r_inv*mj*rho_inv_j*pj->P;
@@ -398,6 +407,18 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
   pj->grad_P[0] += -dx[0]*wj_dx*r_inv*mi*rho_inv_i*pi->P;
   pj->grad_P[1] += -dx[1]*wj_dx*r_inv*mi*rho_inv_i*pi->P;
   pj->grad_P[2] += -dx[2]*wj_dx*r_inv*mi*rho_inv_i*pi->P;
+    
+  pi->kernel_average_grad_rho[0] += pj->grad_rho[0] * wi * mj;
+  pi->kernel_average_grad_rho[1] += pj->grad_rho[1] * wi * mj;
+  pi->kernel_average_grad_rho[2] += pj->grad_rho[2] * wi * mj;
+    
+  pj->kernel_average_grad_rho[0] += pi->grad_rho[0] * wj * mi;
+  pj->kernel_average_grad_rho[1] += pi->grad_rho[1] * wj * mi;
+  pj->kernel_average_grad_rho[2] += pi->grad_rho[2] * wj * mi;
+    
+  pi->kernel_average_rho += pj->rho * wi * mj;
+    
+  pj->kernel_average_rho += pi->rho * wj * mi;
   
 #endif
     
@@ -405,10 +426,12 @@ __attribute__((always_inline)) INLINE static void runner_iact_gradient(
 	
   
   if(pi->last_correct_rho){
-  	rho_inv_i = 1.f / (expf(-pi->I_general*pi->I_general)*pi->rho + (1-expf(-pi->I_general*pi->I_general))*pi->last_correct_rho);
+  	float corrected_rho_i_aux = pi->last_correct_rho;
+  	rho_inv_i = 1.f / (expf(-pi->I_general*pi->I_general)*pi->rho + (1-expf(-pi->I_general*pi->I_general)) * corrected_rho_i_aux);
   }
   if(pj->last_correct_rho){
-  	rho_inv_j = 1.f / (expf(-pj->I_general*pj->I_general)*pj->rho + (1-expf(-pj->I_general*pj->I_general))*pj->last_correct_rho);
+  	float corrected_rho_j_aux = pj->last_correct_rho;
+  	rho_inv_j = 1.f / (expf(-pj->I_general*pj->I_general)*pj->rho + (1-expf(-pj->I_general*pj->I_general)) * corrected_rho_j_aux);
   }
   
     int i,j,k;
@@ -506,16 +529,30 @@ __attribute__((always_inline)) INLINE static void runner_iact_nonsym_gradient(
   pi->sum_wij_exp_P_aux += pj->P * wi * expf(-pj->I_aux*pj->I_aux);
   pi->sum_wij_exp_aux += wi * expf(-pj->I_aux*pj->I_aux);
 
+    
+  
+  //pi->sum_wij_exp_P_aux += pj->P * expf(-pj->I_aux*pj->I_aux);
+  //pi->sum_wij_exp_aux += expf(-pj->I_aux*pj->I_aux);
+
+    
   pi->grad_P[0] += dx[0]*wi_dx*r_inv*mj*rho_inv_j*pj->P;
   pi->grad_P[1] += dx[1]*wi_dx*r_inv*mj*rho_inv_j*pj->P;
   pi->grad_P[2] += dx[2]*wi_dx*r_inv*mj*rho_inv_j*pj->P;
+    
+  pi->kernel_average_grad_rho[0] += pj->grad_rho[0] * wi * mj;
+  pi->kernel_average_grad_rho[1] += pj->grad_rho[1] * wi * mj;
+  pi->kernel_average_grad_rho[2] += pj->grad_rho[2] * wi * mj;
+    
+    
+  pi->kernel_average_rho += pj->rho * wi * mj;
   
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION  
 
   if(pj->last_correct_rho){
-  	rho_inv_j = 1.f / (expf(-pj->I_general*pj->I_general)*pj->rho + (1-expf(-pj->I_general*pj->I_general))*pj->last_correct_rho);
+  	float corrected_rho_j_aux = pj->last_correct_rho;
+  	rho_inv_j = 1.f / (expf(-pj->I_general*pj->I_general)*pj->rho + (1-expf(-pj->I_general*pj->I_general)) * corrected_rho_j_aux);
   }
   
     int i,j,k;

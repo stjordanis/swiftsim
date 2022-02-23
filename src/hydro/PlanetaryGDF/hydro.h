@@ -611,11 +611,15 @@ __attribute__((always_inline)) INLINE static void hydro_end_density(
   
    
   //NOTE: extra rho on denominator from assuming all rho_b are rho_a
-   p->I_aux = (p->grad_rho[0]*p->sum_rij[0] + p->grad_rho[1]*p->sum_rij[1] + p->grad_rho[2]*p->sum_rij[2]) / p->rho / p->rho;
-  
+   p->I_aux = sqrtf(10000000.f)*fabs((p->grad_rho[0]*p->sum_rij[0] + p->grad_rho[1]*p->sum_rij[1] + p->grad_rho[2]*p->sum_rij[2]) / p->rho / p->rho);
+   // p->I_aux = 1000.f * sqrt(p->grad_rho[0]*p->grad_rho[0] + p->grad_rho[1]*p->grad_rho[1] + p->grad_rho[2]*p->grad_rho[2]) * p->h  / p->rho;
+
+    
   //NOTE: better to put factor in exponential rather than in I 
-  p->I_aux = 100*fabs(p->I);   
- 
+    
+ if(p->I_general){
+     p->I_aux = p->I_general;
+ }
 #endif
     
 #ifdef PLANETARY_MATRIX_INVERSION 
@@ -766,6 +770,12 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_gradient(
   p->grad_P[0] = 0.f;
   p->grad_P[1] = 0.f;
   p->grad_P[2] = 0.f;
+    
+  p->kernel_average_grad_rho[0] = 0.f;
+  p->kernel_average_grad_rho[1] = 0.f;
+  p->kernel_average_grad_rho[2] = 0.f;
+    
+  p->kernel_average_rho = 0.f;
   
 #endif
     
@@ -854,33 +864,66 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
   p->grad_P[0] *= h_inv_dim_plus_one;
   p->grad_P[1] *= h_inv_dim_plus_one;
   p->grad_P[2] *= h_inv_dim_plus_one;
-  
-  
-  //p->I_general = fabs(p->sum_over_rho - 1.f) + fabs((p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho);
-  
-  p->I_general = fabs(p->sum_over_rho - 1.f) + 0.5f*fabs((p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho) + 0.5f*fabs((p->grad_P[0]*p->sum_rij_over_rho[0] + p->grad_P[1]*p->sum_rij_over_rho[1] + p->grad_P[2]*p->sum_rij_over_rho[2]) / p->P);
-  
-  //NOTE: better to put factor in exponential rather than in I 
-  p->I_general = 100.f*fabs(p->I_general); //10000.f*fabs(p->I_general);   
     
- 
-  
+  p->kernel_average_grad_rho[0] += p->grad_rho[0] * kernel_root * p->mass;
+  p->kernel_average_grad_rho[1] += p->grad_rho[1] * kernel_root * p->mass;
+  p->kernel_average_grad_rho[2] += p->grad_rho[2] * kernel_root * p->mass;
+    
+  p->kernel_average_grad_rho[0] /= p->sum_wij;
+  p->kernel_average_grad_rho[1] /= p->sum_wij;
+  p->kernel_average_grad_rho[2] /= p->sum_wij;
+    
+  p->kernel_average_rho += p->rho * kernel_root * p->mass;    
+  p->kernel_average_rho /= p->sum_wij;
+    
+   p->sum_wij_exp_P_aux += p->P * kernel_root * expf(-p->I_aux*p->I_aux);
+   p->sum_wij_exp_aux += kernel_root * expf(-p->I_aux*p->I_aux);
+       
+       
   float P_tilde_general = p->sum_wij_exp_P_aux / p->sum_wij_exp_aux;
     
+    
+ // p->I_general = fabs(p->sum_over_rho - 1.f) + fabs((p->kernel_average_grad_rho[0]*p->sum_rij_over_rho[0] + p->kernel_average_grad_rho[1]*p->sum_rij_over_rho[1] + p->kernel_average_grad_rho[2]*p->sum_rij_over_rho[2]) / p->kernel_average_rho);
+  
+  //p->I_general = fabs(p->sum_over_rho - 1.f) + fabs((p->grad_P[0]*p->sum_rij_over_rho[0] + p->grad_P[1]*p->sum_rij_over_rho[1] + p->grad_P[2]*p->sum_rij_over_rho[2]) / P_tilde_general);
+  
+  //NOTE: better to put factor in exponential rather than in I 
+  //p->I_general = 100.f*fabs(p->I_general); //10000.f*fabs(p->I_general);   
+    
+ 
+ float I_term1 = fabs(p->sum_over_rho - 1.f);
+ float I_term2 = fabs((p->grad_rho[0]*p->sum_rij_over_rho[0] + p->grad_rho[1]*p->sum_rij_over_rho[1] + p->grad_rho[2]*p->sum_rij_over_rho[2]) / p->rho);
+  
+    
   // temp 
-  p->I = p->I_general;
+  p->I = sqrtf(100.f*(100.f*I_term1*I_term1 + 1000.f*I_term2*I_term2));
+    
+    
+    
+  p->I_general = p->I;
+    
+    
+   // P_tilde_general = 3.7498056392739934e-06;
+    
+    p->last_uncorrected_rho = p->rho;
+    
+    
+  // temp 
+  //p->I = p->I_general;
   
   
     
   /* Bullet proof */
-  if (p->sum_wij_exp > 0.f && p->sum_wij_exp_P > 0.f && p->sum_wij_exp_T > 0.f && p->I > 0.f){
+  
 	  /* End computation */
 	  //p->sum_wij_exp_P /= p->sum_wij_exp;
 	  //p->sum_wij_exp_T /= p->sum_wij_exp;
 	  
 	  /* Compute new P */ 
-	  float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*P_tilde_general;//p->sum_wij_exp_P;
-
+	  //float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*(P_tilde_general + (p->P - p->last_uncorrect_P));//p->sum_wij_exp_P;
+    float P_new = expf(-p->I*p->I)*p->P + (1.f - expf(-p->I*p->I))*P_tilde_general; 
+    
+    
     	  /* Compute new T */
 	  //float T_new = expf(-p->I*p->I)*p->T + (1.f - expf(-p->I*p->I))*p->sum_wij_exp_T;
           
@@ -907,8 +950,8 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
 	  	rho_new = gas_density_from_pressure_and_temperature(P_new, T_new, p->mat_id);
 	  } 
    
-	   
-	   
+	
+    
    
 	  /* Ensure new density is not lower than minimum SPH density */
 	  if (rho_new < rho_min){
@@ -920,13 +963,9 @@ __attribute__((always_inline)) INLINE static void hydro_end_gradient(
             p->P = gas_pressure_from_internal_energy(p->rho, p->u, p->mat_id);
             p->T = gas_temperature_from_internal_energy(p->rho, p->u, p->mat_id);
 	  }
-  } else { 
-    const float P = gas_pressure_from_internal_energy(p->rho, p->u, p->mat_id);
-    const float T = gas_temperature_from_internal_energy(p->rho, p->u, p->mat_id);
-    p->P = P;
-    p->T = T;
-  }
 
+
+ // p->I=p->I_aux;  
     
 #endif
   

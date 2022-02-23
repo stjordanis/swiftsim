@@ -329,6 +329,10 @@ struct part {
   
 /* Gradient of P i.e. sum of m/rho P grad_W */
   float grad_P[3];
+    
+  float kernel_average_rho;
+    
+  float kernel_average_grad_rho[3];
   
 #endif
     
@@ -361,6 +365,9 @@ struct part {
   
   /*! Last step's corrected rho */
   float last_correct_rho;
+    
+/*! Last step's uncorrected rho */
+  float last_uncorrected_rho;
 #endif
 
 } SWIFT_STRUCT_ALIGN;
