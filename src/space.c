@@ -58,6 +58,7 @@
 #include "stars.h"
 #include "threadpool.h"
 #include "tools.h"
+#include "zoom_region.h"
 
 /* Split size. */
 int space_splitsize = space_splitsize_default;
@@ -1337,10 +1338,22 @@ void space_init(struct space *s, struct swift_params *params,
     message("Imposing a BH smoothing length of %e", s->initial_bpart_h);
   }
 
+#ifdef WITH_ZOOM_REGION
+  /* Init the zoom region. */
+  zoom_region_init(params, s);
+#endif
+
   /* Apply shift */
   double shift[3] = {0.0, 0.0, 0.0};
-  parser_get_opt_param_double_array(params, "InitialConditions:shift", 3,
+  if (s->with_zoom_region) {
+#ifdef WITH_ZOOM_REGION
+    /* Shift zoom particles to the middle of the box, any manual shift is ignored in this case */
+    for (int i = 0; i < 3; i++) shift[i] = s->zoom_props->shift[i];
+#endif
+  } else {
+    parser_get_opt_param_double_array(params, "InitialConditions:shift", 3,
                                     shift);
+  }
   if ((shift[0] != 0. || shift[1] != 0. || shift[2] != 0.) && !dry_run) {
     message("Shifting particles by [%e %e %e]", shift[0], shift[1], shift[2]);
     for (size_t k = 0; k < Npart; k++) {
@@ -1497,6 +1510,8 @@ void space_init(struct space *s, struct swift_params *params,
   if (create_sparts) {
     space_init_unique_id(s, nr_nodes);
   }
+
+  exit(0);
 }
 
 /**

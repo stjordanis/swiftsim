@@ -30,6 +30,89 @@
 #include "engine.h"
 #include "scheduler.h"
 
+void set_top_level_cell_locations(struct space *s, const int cdim[3], const int for_zoom) {
+
+  const integertime_t ti_current = (s->e != NULL) ? s->e->ti_current : 0;
+  size_t cid;
+  float dmin;
+
+  /* Minimum dimension of cell width. */
+  if (for_zoom) {
+#ifdef WITH_ZOOM_REGION
+    dmin = min3(s->zoom_props->width[0], s->zoom_props->width[1], s->zoom_props->width[2]);
+#endif
+  } else {
+    dmin = min3(s->width[0], s->width[1], s->width[2]);
+  }
+
+#ifdef WITH_ZOOM_REGION
+  /* Offset in top level cell list the zoom cells start from. */
+  const int cdim_offset = s->cdim[0] * s->cdim[1] * s->cdim[2];
+
+  /* Central natural top level cell that contains all the zoom cells. */
+  const size_t void_idx = cell_getid(s->cdim, (int)s->cdim[0]/2, (int)s->cdim[1]/2,
+          (int)s->cdim[2]/2);
+#endif
+
+  /* Set the cell location and sizes. */
+  for (int i = 0; i < cdim[0]; i++)
+    for (int j = 0; j < cdim[1]; j++)
+      for (int k = 0; k < cdim[2]; k++) {
+        /* Pick out the cell */
+        cid = cell_getid(cdim, i, j, k);
+#ifdef WITH_ZOOM_REGION
+        if (for_zoom) cid += cdim_offset;
+#endif
+        struct cell *restrict c = &s->cells_top[cid];
+
+        /* Assign cell properties. */
+        if (for_zoom) {
+#ifdef WITH_ZOOM_REGION
+          c->loc[0] = i * s->zoom_props->width[0] + s->cells_top[void_idx].loc[0];
+          c->loc[1] = j * s->zoom_props->width[1] + s->cells_top[void_idx].loc[1];
+          c->loc[2] = k * s->zoom_props->width[2] + s->cells_top[void_idx].loc[2];
+          c->width[0] = s->zoom_props->width[0];
+          c->width[1] = s->zoom_props->width[1];
+          c->width[2] = s->zoom_props->width[2];
+#endif
+        } else {
+          c->loc[0] = i * s->width[0];
+          c->loc[1] = j * s->width[1];
+          c->loc[2] = k * s->width[2];
+          c->width[0] = s->width[0];
+          c->width[1] = s->width[1];
+          c->width[2] = s->width[2];
+        }
+        c->dmin = dmin;
+        c->depth = 0;
+        c->split = 0;
+        c->hydro.count = 0;
+        c->grav.count = 0;
+        c->stars.count = 0;
+        c->sinks.count = 0;
+        c->top = c;
+        c->super = c;
+        c->hydro.super = c;
+        c->grav.super = c;
+        c->hydro.ti_old_part = ti_current;
+        c->grav.ti_old_part = ti_current;
+        c->stars.ti_old_part = ti_current;
+        c->sinks.ti_old_part = ti_current;
+        c->black_holes.ti_old_part = ti_current;
+        c->grav.ti_old_multipole = ti_current;
+#ifdef WITH_MPI
+        c->mpi.tag = -1;
+        c->mpi.recv = NULL;
+        c->mpi.send = NULL;
+#endif  // WITH_MPI
+        if (s->with_self_gravity) c->grav.multipole = &s->multipoles_top[cid];
+#if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
+        if (for_zoom) error("Bad check for zoom case");
+        cell_assign_top_level_cell_index(c, s->cdim, s->dim, s->iwidth);
+#endif
+      }
+}
+
 /**
  * @brief Re-build the top-level cell grid.
  *
@@ -43,7 +126,6 @@ void space_regrid(struct space *s, int verbose) {
   const size_t nr_bparts = s->nr_bparts;
   const size_t nr_sinks = s->nr_sinks;
   const ticks tic = getticks();
-  const integertime_t ti_current = (s->e != NULL) ? s->e->ti_current : 0;
 
   /* Run through the cells and get the current h_max. */
   // tic = getticks();
@@ -220,10 +302,17 @@ void space_regrid(struct space *s, int verbose) {
       s->width[k] = s->dim[k] / cdim[k];
       s->iwidth[k] = 1.0 / s->width[k];
     }
-    const float dmin = min3(s->width[0], s->width[1], s->width[2]);
 
     /* Allocate the highest level of cells. */
     s->tot_cells = s->nr_cells = cdim[0] * cdim[1] * cdim[2];
+    
+#ifdef WITH_ZOOM_REGION
+    /* Add the additional zoom cells to the total. */
+    if (s->with_zoom_region) {
+      s->tot_cells += s->zoom_props->cdim[0] * s->zoom_props->cdim[1] * s->zoom_props->cdim[2];
+      s->nr_cells += s->zoom_props->cdim[0] * s->zoom_props->cdim[1] * s->zoom_props->cdim[2]; 
+    }
+#endif
 
     if (swift_memalign("cells_top", (void **)&s->cells_top, cell_align,
                        s->nr_cells * sizeof(struct cell)) != 0)
@@ -291,49 +380,25 @@ void space_regrid(struct space *s, int verbose) {
     }
 
     /* Set the cell location and sizes. */
-    for (int i = 0; i < cdim[0]; i++)
-      for (int j = 0; j < cdim[1]; j++)
-        for (int k = 0; k < cdim[2]; k++) {
-          const size_t cid = cell_getid(cdim, i, j, k);
-          struct cell *restrict c = &s->cells_top[cid];
-          c->loc[0] = i * s->width[0];
-          c->loc[1] = j * s->width[1];
-          c->loc[2] = k * s->width[2];
-          c->width[0] = s->width[0];
-          c->width[1] = s->width[1];
-          c->width[2] = s->width[2];
-          c->dmin = dmin;
-          c->depth = 0;
-          c->split = 0;
-          c->hydro.count = 0;
-          c->grav.count = 0;
-          c->stars.count = 0;
-          c->sinks.count = 0;
-          c->top = c;
-          c->super = c;
-          c->hydro.super = c;
-          c->grav.super = c;
-          c->hydro.ti_old_part = ti_current;
-          c->grav.ti_old_part = ti_current;
-          c->stars.ti_old_part = ti_current;
-          c->sinks.ti_old_part = ti_current;
-          c->black_holes.ti_old_part = ti_current;
-          c->grav.ti_old_multipole = ti_current;
-#ifdef WITH_MPI
-          c->mpi.tag = -1;
-          c->mpi.recv = NULL;
-          c->mpi.send = NULL;
-#endif  // WITH_MPI
-          if (s->with_self_gravity) c->grav.multipole = &s->multipoles_top[cid];
-#if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
-          cell_assign_top_level_cell_index(c, s->cdim, s->dim, s->iwidth);
+    set_top_level_cell_locations(s, cdim, /*for_zoom=*/0);
+
+#ifdef WITH_ZOOM_REGION
+    if (s->with_zoom_region) {
+       set_top_level_cell_locations(s, s->zoom_props->cdim, /*for_zoom=*/1);
+    }
 #endif
-        }
 
     /* Be verbose about the change. */
-    if (verbose)
+    if (verbose) {
       message("set cell dimensions to [ %i %i %i ].", cdim[0], cdim[1],
               cdim[2]);
+#ifdef WITH_ZOOM_REGION
+      if (s->with_zoom_region) {
+        message("set zoom cell dimensions to [ %i %i %i ].", s->zoom_props->cdim[0],
+                s->zoom_props->cdim[1], s->zoom_props->cdim[2]);
+      }
+#endif
+    }
 
 #ifdef WITH_MPI
     if (oldnodeIDs != NULL) {

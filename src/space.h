@@ -314,6 +314,14 @@ struct space {
   /*! Structure dealing with the computation of a unique ID */
   struct unique_id unique_id;
 
+  /*! Are we running with a zoom region? */
+  int with_zoom_region;
+
+#ifdef WITH_ZOOM_REGION
+  /*! Structure that stores the zoom regions properties. */
+  struct zoom_region_properties *zoom_props;
+#endif
+
 #ifdef WITH_MPI
 
   /*! Buffers for parts that we will receive from foreign cells. */
@@ -334,6 +342,18 @@ struct space {
 
 #endif
 };
+
+#ifdef WITH_ZOOM_REGION
+struct zoom_region_properties {
+  int n_background_cells;
+
+  double width[3];
+
+  int cdim[3];
+
+  double shift[3];
+};
+#endif
 
 /* Function prototypes. */
 void space_free_buff_sort_indices(struct space *s);
