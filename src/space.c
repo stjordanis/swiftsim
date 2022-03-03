@@ -1510,8 +1510,6 @@ void space_init(struct space *s, struct swift_params *params,
   if (create_sparts) {
     space_init_unique_id(s, nr_nodes);
   }
-
-  exit(0);
 }
 
 /**

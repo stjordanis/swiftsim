@@ -988,13 +988,14 @@ void cell_check_multipole(struct cell *c,
       if (c->progeny[k] != NULL)
         cell_check_multipole(c->progeny[k], grav_props);
 
-  if (c->grav.count > 0) {
+  if (c->grav.count > 10) {
     /* Brute-force calculation */
     gravity_P2M(&ma, c->grav.parts, c->grav.count, grav_props);
     gravity_multipole_compute_power(&ma.m_pole);
 
     /* Now  compare the multipole expansion */
     if (!gravity_multipole_equal(&ma, c->grav.multipole, tolerance)) {
+      message("cellID: %llu grav.count: %i", c->cellID, c->grav.count);
       message("Multipoles are not equal at depth=%d! tol=%f", c->depth,
               tolerance);
       message("Correct answer:");

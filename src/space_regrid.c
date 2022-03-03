@@ -45,15 +45,6 @@ void set_top_level_cell_locations(struct space *s, const int cdim[3], const int 
     dmin = min3(s->width[0], s->width[1], s->width[2]);
   }
 
-#ifdef WITH_ZOOM_REGION
-  /* Offset in top level cell list the zoom cells start from. */
-  const int cdim_offset = s->cdim[0] * s->cdim[1] * s->cdim[2];
-
-  /* Central natural top level cell that contains all the zoom cells. */
-  const size_t void_idx = cell_getid(s->cdim, (int)s->cdim[0]/2, (int)s->cdim[1]/2,
-          (int)s->cdim[2]/2);
-#endif
-
   /* Set the cell location and sizes. */
   for (int i = 0; i < cdim[0]; i++)
     for (int j = 0; j < cdim[1]; j++)
@@ -61,16 +52,16 @@ void set_top_level_cell_locations(struct space *s, const int cdim[3], const int 
         /* Pick out the cell */
         cid = cell_getid(cdim, i, j, k);
 #ifdef WITH_ZOOM_REGION
-        if (for_zoom) cid += cdim_offset;
+        if (for_zoom) cid += s->zoom_props->cdim_offset;
 #endif
         struct cell *restrict c = &s->cells_top[cid];
 
         /* Assign cell properties. */
         if (for_zoom) {
 #ifdef WITH_ZOOM_REGION
-          c->loc[0] = i * s->zoom_props->width[0] + s->cells_top[void_idx].loc[0];
-          c->loc[1] = j * s->zoom_props->width[1] + s->cells_top[void_idx].loc[1];
-          c->loc[2] = k * s->zoom_props->width[2] + s->cells_top[void_idx].loc[2];
+          c->loc[0] = i * s->zoom_props->width[0] + s->cells_top[s->zoom_props->void_idx].loc[0];
+          c->loc[1] = j * s->zoom_props->width[1] + s->cells_top[s->zoom_props->void_idx].loc[1];
+          c->loc[2] = k * s->zoom_props->width[2] + s->cells_top[s->zoom_props->void_idx].loc[2];
           c->width[0] = s->zoom_props->width[0];
           c->width[1] = s->zoom_props->width[1];
           c->width[2] = s->zoom_props->width[2];
@@ -107,8 +98,7 @@ void set_top_level_cell_locations(struct space *s, const int cdim[3], const int 
 #endif  // WITH_MPI
         if (s->with_self_gravity) c->grav.multipole = &s->multipoles_top[cid];
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
-        if (for_zoom) error("Bad check for zoom case");
-        cell_assign_top_level_cell_index(c, s->cdim, s->dim, s->iwidth);
+        cell_assign_top_level_cell_index(c, s);
 #endif
       }
 }
@@ -307,10 +297,23 @@ void space_regrid(struct space *s, int verbose) {
     s->tot_cells = s->nr_cells = cdim[0] * cdim[1] * cdim[2];
     
 #ifdef WITH_ZOOM_REGION
-    /* Add the additional zoom cells to the total. */
     if (s->with_zoom_region) {
+      /* Add the additional zoom cells to the total. */
       s->tot_cells += s->zoom_props->cdim[0] * s->zoom_props->cdim[1] * s->zoom_props->cdim[2];
       s->nr_cells += s->zoom_props->cdim[0] * s->zoom_props->cdim[1] * s->zoom_props->cdim[2]; 
+
+      /* Offset in top level cell list the zoom cells start from. */
+      s->zoom_props->cdim_offset = s->cdim[0] * s->cdim[1] * s->cdim[2];
+
+      /* Central natural top level cell that contains all the zoom cells. */
+      s->zoom_props->void_idx = cell_getid(s->cdim, (int)s->cdim[0]/2, (int)s->cdim[1]/2,
+              (int)s->cdim[2]/2);
+
+      /* Zoom cell dimensions. */
+      for (int k = 0; k < 3; k++) {
+        s->zoom_props->width[k] = s->width[k] / s->zoom_props->cdim[k];
+        s->zoom_props->iwidth[k] = 1.0 / s->zoom_props->width[k];
+      }
     }
 #endif
 
@@ -463,4 +466,5 @@ void space_regrid(struct space *s, int verbose) {
   if (verbose)
     message("took %.3f %s.", clocks_from_ticks(getticks() - tic),
             clocks_getunit());
+
 }

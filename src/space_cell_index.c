@@ -205,6 +205,13 @@ void space_gparts_get_cell_index_mapper(void *map_data, int nr_gparts,
   const double ih_x = s->iwidth[0];
   const double ih_y = s->iwidth[1];
   const double ih_z = s->iwidth[2];
+#ifdef WITH_ZOOM_REGION
+  const int cdim_zoom[3] = {s->zoom_props->cdim[0], s->zoom_props->cdim[1],
+      s->zoom_props->cdim[2]};
+  const double ih_x_zoom = s->zoom_props->iwidth[0];
+  const double ih_y_zoom = s->zoom_props->iwidth[1];
+  const double ih_z_zoom = s->zoom_props->iwidth[2];
+#endif
 
   /* Init the local count buffer. */
   int *cell_counts = (int *)calloc(sizeof(int), s->nr_cells);
@@ -250,13 +257,21 @@ void space_gparts_get_cell_index_mapper(void *map_data, int nr_gparts,
     if (pos_z == dim_z) pos_z = 0.0;
 
     /* Get its cell index */
-    const int index =
+    int index =
         cell_getid(cdim, pos_x * ih_x, pos_y * ih_y, pos_z * ih_z);
+#ifdef WITH_ZOOM_REGION
+    if (s->with_zoom_region && index == s->zoom_props->void_idx) {
+        index = s->zoom_props->cdim_offset + cell_getid(cdim_zoom,
+                (pos_x - s->cells_top[s->zoom_props->void_idx].loc[0]) * ih_x_zoom,
+                (pos_y - s->cells_top[s->zoom_props->void_idx].loc[1]) * ih_y_zoom,
+                (pos_z - s->cells_top[s->zoom_props->void_idx].loc[2]) * ih_z_zoom);
+    }
+#endif
 
 #ifdef SWIFT_DEBUG_CHECKS
-    if (index < 0 || index >= cdim[0] * cdim[1] * cdim[2])
-      error("Invalid index=%d cdim=[%d %d %d] p->x=[%e %e %e]", index, cdim[0],
-            cdim[1], cdim[2], pos_x, pos_y, pos_z);
+    if (index < 0 || index >= s->nr_cells)
+      error("Invalid index=%d nr_cells=[%d] p->x=[%e %e %e]", index, s->nr_cells,
+            pos_x, pos_y, pos_z);
 
     if (pos_x >= dim_x || pos_y >= dim_y || pos_z >= dim_z || pos_x < 0. ||
         pos_y < 0. || pos_z < 0.)

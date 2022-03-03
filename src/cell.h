@@ -1322,28 +1322,41 @@ __attribute__((always_inline)) INLINE static struct task *cell_get_recv(
  * @param iwidth inverse of top cell width
  */
 __attribute__((always_inline)) INLINE void cell_assign_top_level_cell_index(
-    struct cell *c, int cdim[3], double dim[3], double iwidth[3]) {
+    struct cell *c, const struct space *s) {
 
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
   if (c->depth != 0) {
     error("assigning top level cell index to cell with depth > 0");
   } else {
-    if (cdim[0] * cdim[1] * cdim[2] > 32 * 32 * 32) {
+    if (s->nr_cells > 32 * 32 * 32) {
       /* print warning only once */
       if (last_cell_id == 1ULL) {
         message(
-            "WARNING: Got %d x %d x %d top level cells. "
+            "WARNING: Got %i top level cells. "
             "Cell IDs are only guaranteed to be "
             "reproduceably unique if count is < 32^3",
-            cdim[0], cdim[1], cdim[2]);
+            s->nr_cells);
       }
       /* Do this in same line. Otherwise, bad things happen. */
       c->cellID = atomic_inc(&last_cell_id);
     } else {
-      int i = (int)(c->loc[0] * iwidth[0] + 0.5);
-      int j = (int)(c->loc[1] * iwidth[1] + 0.5);
-      int k = (int)(c->loc[2] * iwidth[2] + 0.5);
-      c->cellID = (unsigned long long)(cell_getid(cdim, i, j, k) + 1);
+      int i = (int)(c->loc[0] * s->iwidth[0] + 0.5);
+      int j = (int)(c->loc[1] * s->iwidth[1] + 0.5);
+      int k = (int)(c->loc[2] * s->iwidth[2] + 0.5);
+      c->cellID = (unsigned long long)(cell_getid(s->cdim, i, j, k) + 1);
+#ifdef WITH_ZOOM_REGION
+      /* Is this a zoom cell? */
+      if (s->with_zoom_region && c->width[0] < s->width[0]) {
+        int i_zoom = (int)((c->loc[0] - s->cells_top[s->zoom_props->void_idx].loc[0]) *
+                s->zoom_props->iwidth[0] + 0.5);
+        int j_zoom = (int)((c->loc[1] - s->cells_top[s->zoom_props->void_idx].loc[1]) *
+                s->zoom_props->iwidth[1] + 0.5);
+        int k_zoom = (int)((c->loc[2] - s->cells_top[s->zoom_props->void_idx].loc[2]) *
+                s->zoom_props->iwidth[2] + 0.5);
+        c->cellID = s->zoom_props->cdim_offset + 
+            (unsigned long long)(cell_getid(s->zoom_props->cdim, i_zoom, j_zoom, k_zoom) + 1);
+      }
+#endif
     }
     /* in both cases, keep track of first prodigy index */
     atomic_inc(&last_leaf_cell_id);

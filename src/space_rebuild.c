@@ -849,9 +849,18 @@ void space_rebuild(struct space *s, int repartitioned, int verbose) {
       error("Inhibited particle sorted into a cell!");
 
     /* New cell index */
-    const int new_gind =
+    int new_gind;
+    new_gind =
         cell_getid(s->cdim, gp->x[0] * s->iwidth[0], gp->x[1] * s->iwidth[1],
                    gp->x[2] * s->iwidth[2]);
+#ifdef WITH_ZOOM_REGION
+    if (s->with_zoom_region && new_gind == s->zoom_props->void_idx) {
+      new_gind = s->zoom_props->cdim_offset + cell_getid(s->zoom_props->cdim,
+            (gp->x[0] - s->cells_top[s->zoom_props->void_idx].loc[0]) * s->zoom_props->iwidth[0],
+            (gp->x[1] - s->cells_top[s->zoom_props->void_idx].loc[1]) * s->zoom_props->iwidth[1],
+            (gp->x[2] - s->cells_top[s->zoom_props->void_idx].loc[2]) * s->zoom_props->iwidth[2]);
+    }
+#endif
 
     /* New cell of this gpart */
     const struct cell *c = &s->cells_top[new_gind];
@@ -912,7 +921,7 @@ void space_rebuild(struct space *s, int repartitioned, int verbose) {
     c->black_holes.ti_old_part = ti_current;
 
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
-    cell_assign_top_level_cell_index(c, s->cdim, s->dim, s->iwidth);
+    cell_assign_top_level_cell_index(c, s);
 #endif
 
     const int is_local = (c->nodeID == engine_rank);

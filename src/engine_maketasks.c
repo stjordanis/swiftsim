@@ -54,6 +54,7 @@
 #include "proxy.h"
 #include "rt_properties.h"
 #include "timers.h"
+#include "zoom_region.h"
 
 extern int engine_max_parts_per_ghost;
 extern int engine_max_sparts_per_ghost;
@@ -1592,6 +1593,9 @@ void engine_make_hierarchical_tasks_mapper(void *map_data, int num_elements,
  * - All top-cells get a self task.
  * - All pairs within range according to the multipole acceptance
  *   criterion get a pair task.
+ *
+ *   In the case of a zoom region, tasks between the zoom and natural
+ *   TL cells also have to be made.
  */
 void engine_make_self_gravity_tasks_mapper(void *map_data, int num_elements,
                                            void *extra_data) {
@@ -1600,13 +1604,16 @@ void engine_make_self_gravity_tasks_mapper(void *map_data, int num_elements,
   struct space *s = e->s;
   struct scheduler *sched = &e->sched;
   const int nodeID = e->nodeID;
-  const int periodic = s->periodic;
   const double dim[3] = {s->dim[0], s->dim[1], s->dim[2]};
-  const int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
   struct cell *cells = s->cells_top;
   const double theta_crit = e->gravity_properties->theta_crit;
   const double max_distance = e->mesh->r_cut_max;
   const double max_distance2 = max_distance * max_distance;
+
+  /* These will be overwritten in the loop, so cant be constant */
+  int periodic = s->periodic;
+  int cdim[3] = {s->cdim[0], s->cdim[1], s->cdim[2]};
+  int i, j, k, offset;
 
   /* Compute how many cells away we need to walk */
   const double distance = 2.5 * cells[0].width[0] / theta_crit;
@@ -1639,9 +1646,24 @@ void engine_make_self_gravity_tasks_mapper(void *map_data, int num_elements,
     const int cid = (size_t)(map_data) + ind;
 
     /* Integer indices of the cell in the top-level grid */
-    const int i = cid / (cdim[1] * cdim[2]);
-    const int j = (cid / cdim[2]) % cdim[1];
-    const int k = cid % cdim[2];
+    for (int ii = 0; ii < 3; ii++) cdim[ii] = s->cdim[ii];
+    i = cid / (cdim[1] * cdim[2]);
+    j = (cid / cdim[2]) % cdim[1];
+    k = cid % cdim[2];
+    periodic = s->periodic;
+    offset = 0;
+
+#ifdef WITH_ZOOM_REGION
+    /* Is this a zoom TL cell? */
+    if (s->with_zoom_region && cid >= s->zoom_props->cdim_offset) {
+      for (int ii = 0; ii < 3; ii++) cdim[ii] = s->zoom_props->cdim[ii];
+      i = (cid - s->zoom_props->cdim_offset) / (cdim[1] * cdim[2]);
+      j = ((cid - s->zoom_props->cdim_offset)/ cdim[2]) % cdim[1];
+      k = (cid - s->zoom_props->cdim_offset) % cdim[2];
+      periodic = 0;
+      offset = s->zoom_props->cdim_offset;
+    }
+#endif
 
     /* Get the cell */
     struct cell *ci = &cells[cid];
@@ -1670,10 +1692,10 @@ void engine_make_self_gravity_tasks_mapper(void *map_data, int num_elements,
 
           /* Get the cell */
           const int cjd = cell_getid(cdim, iii, jjj, kkk);
-          struct cell *cj = &cells[cjd];
+          struct cell *cj = &cells[cjd+offset];
 
           /* Avoid duplicates, empty cells and completely foreign pairs */
-          if (cid >= cjd || cj->grav.count == 0 ||
+          if (cid >= cjd + offset || cj->grav.count == 0 ||
               (ci->nodeID != nodeID && cj->nodeID != nodeID))
             continue;
 
@@ -1752,6 +1774,29 @@ void engine_make_self_gravity_tasks_mapper(void *map_data, int num_elements,
         }
       }
     }
+
+#ifdef WITH_ZOOM_REGION
+    /* Make gravity tasks between this cell (if it's a zoom cell) and the 
+     * surrounding natural TL cells that meet the multipole criteria. */
+    if (s->with_zoom_region && cid >= s->zoom_props->cdim_offset) {
+      for (int ii = 0; ii < s->zoom_props->cdim_offset; ii++) {
+        struct cell *cj = &cells[ii];
+
+        const double min_radius2 = cell_min_dist2(ci, cj, s->periodic, s->dim);
+
+        /* Are we beyond the distance where the truncated forces are 0 ?*/
+        if (s->periodic && min_radius2 > max_distance2) continue;
+
+        if (!cell_can_use_pair_mm(ci, cj, e, s, /*use_rebuild_data=*/1,
+                                    /*is_tree_walk=*/0)) {
+
+            /* Ok, we need to add a direct pair calculation */
+            scheduler_addtask(sched, task_type_pair, task_subtype_grav, 0, 0,
+                              ci, cj);
+        }
+      }
+    }
+#endif
   }
 }
 

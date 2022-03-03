@@ -1314,7 +1314,6 @@ void engine_rebuild(struct engine *e, const int repartitioned,
       error("Total particles in multipoles inconsistent with engine");
   }
 #endif
-
   /* Re-build the tasks. */
   engine_maketasks(e);
 

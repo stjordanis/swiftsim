@@ -345,13 +345,19 @@ struct space {
 
 #ifdef WITH_ZOOM_REGION
 struct zoom_region_properties {
-  int n_background_cells;
-
   double width[3];
+
+  double iwidth[3];
 
   int cdim[3];
 
   double shift[3];
+
+  int cdim_offset;
+
+  int void_idx;
+
+  float zoom_buffer_size;
 };
 #endif
 
