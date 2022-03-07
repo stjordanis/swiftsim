@@ -24,12 +24,13 @@ fi
 # Run SWIFT with RT
 $cmd \
     --hydro \
-    --threads=9 \
+    --threads=1 \
     --verbose=0  \
     --radiation \
     --self-gravity \
     --stars \
     --feedback \
+    --steps=1 \
     ./randomized-rt.yml 2>&1 | tee output.log
 
 echo "running sanity checks"

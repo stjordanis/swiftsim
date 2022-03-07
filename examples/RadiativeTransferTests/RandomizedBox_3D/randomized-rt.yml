@@ -44,9 +44,9 @@ Stars:
   birth_time:           -1   # Give the star in the ICs a decent birth time
 
 Scheduler:
-  max_top_level_cells:        64
-  dependency_graph_frequency: 1
-  enable_rt_subcycling:       0
+  dependency_graph_frequency:       1
+  task_level_output_frequency:      1  # (Optional) Dumping frequency of the task level data. By default, writes only at the first step.
+  enable_rt_subcycling:             1
 
 Restarts:
   delta_hours:        72        # (Optional) decimal hours between dumps of restart files.
