@@ -146,7 +146,8 @@ int rt_reschedule(struct runner *r, struct cell *c) {
      * wait for any dependencies. Don't enqueue it yet. */
     struct task *rt_ghost1 = c->hydro.rt_ghost1;
     if (rt_ghost1 != NULL) rt_reschedule_task(rt_ghost1, /*wait=*/0);
-    if (cellID == 27) message("CellID %lld Rescheduled rt_ghost1", cellID);
+    /* if (cellID == 27) message("CellID %lld Rescheduled rt_ghost1", cellID); */
+    message("CellID %lld Rescheduled rt_ghost1 cycle %d", cellID, c->hydro.rt_cycle);
 
     for (struct link *l = c->hydro.rt_gradient; l != NULL; l = l->next) {
       struct task *t = l->t;
@@ -253,6 +254,11 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
       for (int k = 0; k < t->nr_unlock_tasks; k++) {
         struct task *u = t->unlock_tasks[k];
         atomic_inc(&u->rt_subcycle_wait);
+        long long ciID = u->ci->cellID;
+        long long cjID = -1;
+        if (u->cj != NULL) cjID = u->cj->cellID;
+        if (u->subtype == task_subtype_rt_gradient && (ciID == 27 || cjID == 27))
+          message("RT gradient cells %lld %lld increased rt_wait to %d from task %s cell %lld", ciID, cjID, u->rt_subcycle_wait, taskID_names[t->type], t->ci->cellID);
       }
     }
   }
@@ -264,7 +270,7 @@ void rt_subcycle_rewait_mapper(void *map_data, int num_elements,
  */
 void rt_subcycle_reset_wait_mapper(void *map_data, int num_elements,
                                    void *extra_data) {
-
+message("Resetting subcycle waits");
   struct scheduler *s = (struct scheduler *)extra_data;
   const int *tid = (int *)map_data;
   struct task *tasks = s->tasks;

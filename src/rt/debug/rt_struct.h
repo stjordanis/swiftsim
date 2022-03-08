@@ -64,7 +64,7 @@ struct rt_part_data {
 
   /* Subcycling flags */
 
-  /*! How many times was this particle subcycled this step? */
+  /*! How many times was this particle subcycled this step */
   int debug_nsubcycles;
 };
 

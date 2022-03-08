@@ -2396,7 +2396,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
     long long cellIDi = t2->ci->cellID;
     long long cellIDj = -1;
     if (t2->cj != NULL) cellIDj = t2->cj->cellID;
-    if (t->type == task_type_rt_ghost1) message("Ghost1 cell %lld unlocking %s/%s cells %lld %lld wait=%d skip=%d", t->ci->cellID, taskID_names[t2->type], subtaskID_names[t2->subtype], cellIDi, cellIDj, t2->wait, t2->skip);
+    if (t->type == task_type_rt_ghost1 && cellIDi == 27) message("Ghost1 cell %lld unlocking %s/%s cells %lld %lld wait=%d skip=%d cycle=%d", t->ci->cellID, taskID_names[t2->type], subtaskID_names[t2->subtype], cellIDi, cellIDj, t2->wait, t2->skip, t->ci->hydro.rt_cycle);
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {
