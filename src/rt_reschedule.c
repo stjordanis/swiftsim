@@ -179,16 +179,6 @@ int rt_reschedule(struct runner *r, struct cell *c) {
     if (rt_out != NULL) atomic_inc(&rt_out->wait);
     if (cellID == 27) message("CellID %lld blocking rt_out; wait = %d", cellID, rt_out->wait);
 
-    /* There is an rt_ghost1 -> timestep dependency for cases where we have 
-     * active stars, but no active gas particles in a cell. In these cases, 
-     * the gradient, transport, and thermochemistry tasks will be skipped, 
-     * an the dependency from ghost1 to timestep will be missing. Since we're 
-     * re-scheduling rt_ghost1 now, we need to keep increasing the 
-     * timestep->wait as well. */
-    struct task *timestep = c->timestep;
-    if (timestep != NULL) atomic_inc(&timestep->wait);
-    if (cellID == 27) message("CellID %lld blocking timestep; wait = %d", cellID, timestep->wait);
-
     return 1;
   }
 }

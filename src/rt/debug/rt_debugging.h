@@ -43,7 +43,6 @@ __attribute__((always_inline)) INLINE static void  rt_debugging_count_subcycle( 
  */
 __attribute__((always_inline)) INLINE static void rt_debugging_reset_each_subcycle(
     struct part* restrict p) {
-  p->rt_data.debug_injection_check = 0;
   p->rt_data.debug_calls_iact_gradient_interaction = 0;
   p->rt_data.debug_calls_iact_transport_interaction = 0;
 

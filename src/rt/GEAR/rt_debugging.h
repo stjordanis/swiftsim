@@ -48,7 +48,6 @@ __attribute__((always_inline)) INLINE static void rt_debugging_reset_each_subcyc
     struct part* restrict p) {
 
   /* skip this for GEAR */
-  /* p->rt_data.debug_injection_check = 0; */
   p->rt_data.debug_calls_iact_gradient_interaction = 0;
   p->rt_data.debug_calls_iact_transport_interaction = 0;
 
