@@ -1725,6 +1725,7 @@ void engine_launch(struct engine *e, const char *call) {
   if (e->verbose)
     message("(%s) took %.3f %s.", call, clocks_from_ticks(getticks() - tic),
             clocks_getunit());
+  message("------------- END engine_launch call=%s", call);
 }
 
 /**
@@ -1852,7 +1853,7 @@ void engine_init_particles(struct engine *e, int flag_entropy_ICs,
 
   /* Now, launch the calculation */
   TIMER_TIC;
-  engine_launch(e, "tasks");
+  engine_launch(e, "tasks skip force and kick");
   TIMER_TOC(timer_runners);
 
 #ifdef SWIFT_HYDRO_DENSITY_CHECKS
@@ -1876,7 +1877,7 @@ void engine_init_particles(struct engine *e, int flag_entropy_ICs,
     if (hydro_need_extra_init_loop) {
       engine_marktasks(e);
       engine_skip_force_and_kick(e);
-      engine_launch(e, "tasks");
+      engine_launch(e, "tasks skip force and kick 2");
     }
   }
 
@@ -1937,14 +1938,8 @@ void engine_init_particles(struct engine *e, int flag_entropy_ICs,
 
   /* Run the 0th time-step */
   TIMER_TIC2;
-  engine_launch(e, "tasks");
+  engine_launch(e, "tasks zeroth step");
   TIMER_TOC2(timer_runners);
-
-  /* Initialise additional RT data now that time bins are set */
-#ifdef SWIFT_RT_DEBUG_CHECKS
-  if (e->policy & engine_policy_rt)
-    space_convert_rt_quantities_after_zeroth_step(e->s, e->verbose);
-#endif
 
 #ifdef SWIFT_HYDRO_DENSITY_CHECKS
   /* Run the brute-force hydro calculation for some parts */
@@ -2087,6 +2082,51 @@ void engine_init_particles(struct engine *e, int flag_entropy_ICs,
     }
   }
 
+
+
+
+  /* RT "subcycling" */
+  /* Move forward in time */
+  e->ti_old = e->ti_current;
+
+  const integertime_t rt_step_size = e->ti_rt_end_min - e->ti_old;
+  /* When we arrive at the final step, the rt_step_size can be == 0 */
+  const int nr_rt_cycles = rt_step_size > 0 ? (e->ti_end_min - e->ti_old) / rt_step_size : 0;
+  message("NR cycles: %d | current %lld end_min %lld", nr_rt_cycles, e->ti_current, e->ti_end_min);
+  fflush(stdout);
+
+  for (int sub_cycle = 0; sub_cycle < nr_rt_cycles - 1; ++sub_cycle) {
+
+    //e->ti_old = e->ti_current;
+    /* e->ti_current = e->ti_old + (sub_cycle + 1) * rt_step_size; */
+    e->ti_current_subcycle = e->ti_current + (sub_cycle + 1) * rt_step_size;
+    e->max_active_bin = get_max_active_bin(e->ti_current_subcycle);
+    e->min_active_bin = get_min_active_bin(e->ti_current_subcycle, e->ti_current_subcycle - rt_step_size);
+
+    // think cosmology one day
+    e->time = e->ti_current_subcycle * e->time_base + e->time_begin;
+    e->time_old = (e->ti_current_subcycle - rt_step_size) * e->time_base + e->time_begin;
+    e->time_step = rt_step_size * e->time_base;
+
+    message("cycle %d time=%e min_active_bin=%d max_active_bin=%d", sub_cycle, e->time, e->min_active_bin, e->max_active_bin);
+    engine_unskip_sub_cycle(e);
+    /* engine_print_task_counts(e); */
+    engine_launch(e, "cycles zeroth step");
+  }
+
+  message("------------------ end cycles");
+
+  /* Initialise additional RT data now that time bins are set */
+#ifdef SWIFT_RT_DEBUG_CHECKS
+  /* In particular, the drift counters need to be set to the proper state */
+  message("RESETTING AFTER ZEROTH STEP");
+  if (e->policy & engine_policy_rt)
+    space_convert_rt_quantities_after_zeroth_step(e->s, e->verbose);
+#endif
+
+
+
+
   clocks_gettime(&time2);
 
 #ifdef SWIFT_DEBUG_CHECKS
@@ -2218,54 +2258,11 @@ void engine_step(struct engine *e) {
 
 
 
-/*  */
-/*   const integertime_t rt_step_size = e->ti_rt_end_min - e->ti_old; */
-/*   const int nr_rt_cycles = (e->ti_end_min - e->ti_old) / rt_step_size; */
-/*   message("NR cycles: %d | current %lld end_min %lld", nr_rt_cycles, e->ti_current, e->ti_end_min); */
-/*  */
-/*   for (int sub_cycle = 0; sub_cycle < nr_rt_cycles - 1; ++sub_cycle) { */
-/*  */
-/*     //e->ti_old = e->ti_current; */
-/*     e->ti_current = e->ti_old + (sub_cycle + 1) * rt_step_size; */
-/*     e->max_active_bin = get_max_active_bin(e->ti_current); */
-/*     e->min_active_bin = get_min_active_bin(e->ti_current, e->ti_current - rt_step_size); */
-/*  */
-/*     // think cosmology one day */
-/*     e->time = e->ti_current * e->time_base + e->time_begin; */
-/*     e->time_old = (e->ti_current - rt_step_size) * e->time_base + e->time_begin; */
-/*     e->time_step = rt_step_size * e->time_base; */
-/*  */
-/*     message("cycle %d time=%e", sub_cycle, e->time); */
-/*     engine_unskip_sub_cycle(e); */
-/*     [> engine_print_task_counts(e); <] */
-/*     engine_launch(e, "cycles"); */
-/*  */
-/*     [> for (int i = 0; i <  e->s->nr_cells; ++i) <] */
-/*     [>   cell_update_rt_step(&e->s->cells_top[i], e, rt_step_size); <] */
-/*   } */
-/*  */
-
-
-
-
-
-
-#if defined(SWIFT_RT_DEBUG_CHECKS)
-  /* TODO: clean this up */
-  /* if we're running the debug RT scheme, do some checks after every step.
-   * Do this after the output so we can safely reset debugging checks now. */
-  /* if (e->policy & engine_policy_rt){ */
-  /*   message("RUNNING RT DEBUGGING CHECKS END OF STEP"); */
-  /*   rt_debugging_checks_end_of_step(e, e->verbose); */
-  /* } */
-#endif
-
-
 
 
 
   message("Updating ti_current from %lld to %lld", e->ti_current, e->ti_end_min);
-e->ti_current_subcycle = e->ti_end_min;
+  e->ti_current_subcycle = e->ti_end_min;
  
   e->ti_current = e->ti_end_min;
   e->max_active_bin = get_max_active_bin(e->ti_end_min);
@@ -2273,6 +2270,7 @@ e->ti_current_subcycle = e->ti_end_min;
   e->step += 1;
   engine_current_step = e->step;
   e->step_props = engine_step_prop_none;
+  message("FOR NEW STEP: MIN BIN %d MAX BIN: %d", e->min_active_bin, e->max_active_bin);
 
   /* When restarting, move everyone to the current time. */
   if (e->restarting) engine_drift_all(e, /*drift_mpole=*/1);
@@ -2404,6 +2402,19 @@ e->ti_current_subcycle = e->ti_end_min;
           num_gpart_mpole, e->total_nr_gparts);
   }
 #endif
+
+
+
+#ifdef SWIFT_RT_DEBUG_CHECKS
+  /* if we're running the debug RT scheme, set some flags and do some
+   * checks before each step. */
+    rt_debugging_checks_start_of_step(e, e->verbose);
+  /* } */
+#endif
+
+
+
+
 
 #ifdef SWIFT_GRAVITY_FORCE_CHECKS
   /* Do we need to check if all gparts are active? */
@@ -2561,6 +2572,18 @@ e->ti_current_subcycle = e->ti_end_min;
       (e->collect_group1.b_updated == e->total_nr_bparts))
     e->ti_earliest_undrifted = e->ti_current;
 
+#ifdef SWIFT_DEBUG_CHECKS
+  /* TODO: reset e->max_active_timebin only when subcycling RT since
+   * it modifies this quantity. If left untreated, this check may fail. */
+  /* e->max_active_bin = get_max_active_bin(e->ti_end_min); */
+  /* Verify that all cells have correct time-step information */
+  space_check_timesteps(e->s);
+
+  if (e->ti_end_min == e->ti_current && e->ti_end_min < max_nr_timesteps)
+    error("Obtained a time-step of size 0");
+#endif
+
+
 
 
 
@@ -2572,7 +2595,7 @@ e->ti_current_subcycle = e->ti_end_min;
   const integertime_t rt_step_size = e->ti_rt_end_min - e->ti_old;
   /* When we arrive at the final step, the rt_step_size can be == 0 */
   const int nr_rt_cycles = rt_step_size > 0 ? (e->ti_end_min - e->ti_old) / rt_step_size : 0;
-  message("NR cycles: %d | current %lld end_min %lld", nr_rt_cycles, e->ti_current, e->ti_end_min);
+  message("============= STARTING CYCLES. NR cycles: %d | current %lld end_min %lld", nr_rt_cycles, e->ti_current, e->ti_end_min);
   fflush(stdout);
 
   for (int sub_cycle = 0; sub_cycle < nr_rt_cycles - 1; ++sub_cycle) {
@@ -2588,26 +2611,17 @@ e->ti_current_subcycle = e->ti_end_min;
     e->time_old = (e->ti_current_subcycle - rt_step_size) * e->time_base + e->time_begin;
     e->time_step = rt_step_size * e->time_base;
 
-    message("cycle %d time=%e", sub_cycle, e->time);
+    message("cycle %d time=%e ti_current=%lld min_active_bin=%d max_active_bin=%d", sub_cycle, e->time, e->ti_current_subcycle, e->min_active_bin, e->max_active_bin);
     engine_unskip_sub_cycle(e);
-    engine_print_task_counts(e);
+    /* engine_print_task_counts(e); */
     engine_launch(e, "cycles");
-
-    /* for (int i = 0; i <  e->s->nr_cells; ++i) */
-    /*   cell_update_rt_step(&e->s->cells_top[i], e, rt_step_size); */
   }
 
+  message("------------------ end cycles");
 
 
 
 
-#ifdef SWIFT_DEBUG_CHECKS
-  /* Verify that all cells have correct time-step information */
-  space_check_timesteps(e->s);
-
-  if (e->ti_end_min == e->ti_current && e->ti_end_min < max_nr_timesteps)
-    error("Obtained a time-step of size 0");
-#endif
 
 #ifdef WITH_CSDS
   if (e->policy & engine_policy_csds && e->verbose)
@@ -2632,6 +2646,16 @@ e->ti_current_subcycle = e->ti_end_min;
   engine_dump_restarts(e, 0, e->restart_onexit && engine_is_done(e));
 
   engine_check_for_dumps(e);
+
+#ifdef SWIFT_RT_DEBUG_CHECKS
+  /* if we're running the debug RT scheme, do some checks after every step.
+   * Do this after the output so we can safely reset debugging checks now. */
+  /* Do this after the file dump to properly reset the p->debug_drift counters. */
+  if (e->policy & engine_policy_rt){
+    message("RUNNING RT DEBUGGING CHECKS END OF STEP");
+    rt_debugging_checks_end_of_step(e, e->verbose);
+  }
+#endif
 
   TIMER_TOC2(timer_step);
 
@@ -3004,6 +3028,7 @@ void engine_init(
   e->nr_proxies = 0;
   e->ti_old = 0;
   e->ti_current = 0;
+  e->ti_current_subcycle = 0;
   e->ti_earliest_undrifted = 0;
   e->time_step = 0.;
   e->time_base = 0.;
