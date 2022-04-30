@@ -17,7 +17,6 @@
  *
  ******************************************************************************/
 #include "../config.h"
-
 #include "timeline.h"
 #include "tools.h"
 
@@ -32,12 +31,14 @@
  */
 void test_get_integer_time_end(void) {
 
-  integertime_t dt, max_step, set_time_end, current_time, time_end_recovered, displacement;
+  integertime_t dt, max_step, set_time_end, current_time, time_end_recovered,
+      displacement;
 
   /* run over all possible time bins */
-  /* TODO: starting at a higher bin than 0 to verify that this isn't an issue only for small bins */
+  /* TODO: starting at a higher bin than 0 to verify that this isn't an issue
+   * only for small bins */
   /* Indeed tests seem to pass for bin > 21 */
-  for (int bin = 21; bin < num_time_bins; bin++){
+  for (int bin = 21; bin < num_time_bins; bin++) {
     printf("Running bin %d\n", bin);
 
     dt = get_integer_timestep(bin);
@@ -46,39 +47,45 @@ void test_get_integer_time_end(void) {
       /* First pick a place to set this time_end on the timeline. */
 
       /* we can't have more than this many steps of this size */
-      max_step = max_nr_timesteps / dt; 
+      max_step = max_nr_timesteps / dt;
 
       /* Set the time_end at any step in between there */
-      set_time_end = (integertime_t) (random_uniform(0, max_step)) * dt;
+      set_time_end = (integertime_t)(random_uniform(0, max_step)) * dt;
 
       /* Do some safety checks */
       if (set_time_end % dt != 0) error("time_end not divisible by dt?");
-      if (set_time_end > max_nr_timesteps) error("Time end > max_nr_timesteps?");
-      if (set_time_end < (integertime_t) 0) error("Time end < 0?");
+      if (set_time_end > max_nr_timesteps)
+        error("Time end > max_nr_timesteps?");
+      if (set_time_end < (integertime_t)0) error("Time end < 0?");
 
-      /* Now mimick a "current time" by removing a fraction of dt from 
+      /* Now mimick a "current time" by removing a fraction of dt from
        * the step, and see whether we recover the correct time_end */
-      displacement = (integertime_t) (random_uniform(0., 1.) * dt);
+      displacement = (integertime_t)(random_uniform(0., 1.) * dt);
       current_time = set_time_end - displacement;
 
       /* Another round of safety checks */
-      if (current_time == set_time_end) 
-        message("current==time_end? current=%lld time_end=%lld dt=%lld displacement=%lld bin=%d", 
-                current_time, set_time_end, dt, displacement, bin);
-      if (current_time > set_time_end) 
-        message("current>time_end? current=%lld time_end=%lld dt=%lld displacement=%lld bin=%d", 
-                current_time, set_time_end, dt, displacement, bin);
+      if (current_time == set_time_end)
+        message(
+            "current==time_end? current=%lld time_end=%lld dt=%lld "
+            "displacement=%lld bin=%d",
+            current_time, set_time_end, dt, displacement, bin);
+      if (current_time > set_time_end)
+        message(
+            "current>time_end? current=%lld time_end=%lld dt=%lld "
+            "displacement=%lld bin=%d",
+            current_time, set_time_end, dt, displacement, bin);
       time_end_recovered = get_integer_time_end(current_time, bin);
 
       /* Now the actual check. */
-      if (time_end_recovered != set_time_end) 
-        error("time_end incorrect: expect=%lld got=%lld diff=%lld; current=%lld displacement=%lld, dt=%lld", 
-              set_time_end, time_end_recovered, set_time_end - time_end_recovered, current_time, displacement, dt);
+      if (time_end_recovered != set_time_end)
+        error(
+            "time_end incorrect: expect=%lld got=%lld diff=%lld; current=%lld "
+            "displacement=%lld, dt=%lld",
+            set_time_end, time_end_recovered, set_time_end - time_end_recovered,
+            current_time, displacement, dt);
     }
   }
 }
-
-
 
 /**
  * @brief Check the timeline functions.
