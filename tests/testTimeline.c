@@ -22,13 +22,13 @@
 
 #define NREPEAT 1000000
 
-
 /**
  * @brief does the same as get_integer_time_end, but uses only
  * integer operations. Temporary to check whether this version
  * would solve the potential problems with the current implementation.
  **/
-integertime_t get_integer_time_end_INTEGER_OPERATIONS_ONLY(integertime_t ti_current, timebin_t bin) {
+integertime_t get_integer_time_end_INTEGER_OPERATIONS_ONLY(
+    integertime_t ti_current, timebin_t bin) {
   const integertime_t dti = get_integer_timestep(bin);
   if (dti == 0)
     return 0;
@@ -55,7 +55,7 @@ void test_get_integer_time_end(void) {
   /* TODO: starting at a higher bin than 0 to verify that this isn't an issue
    * only for small bins */
   /* Indeed tests seem to pass for bin > 21 */
-  for (int bin = 21; bin < num_time_bins; bin++) {
+  for (timebin_t bin = 21; bin < num_time_bins; bin++) {
     printf("Running bin %d\n", bin);
 
     dt = get_integer_timestep(bin);
@@ -67,7 +67,7 @@ void test_get_integer_time_end(void) {
       max_step = max_nr_timesteps / dt;
 
       /* Set the time_end at any step in between there */
-      /* TODO: make specific checks for time_end = 0. For now, assume 
+      /* TODO: make specific checks for time_end = 0. For now, assume
        * smallest time_end = dt */
       set_time_end = (integertime_t)(random_uniform(1, max_step)) * dt;
 
@@ -96,11 +96,11 @@ void test_get_integer_time_end(void) {
       time_end_recovered = get_integer_time_end(current_time, bin);
 
       /* Now the actual check. */
-      if (time_end_recovered != set_time_end){
+      if (time_end_recovered != set_time_end) {
         /* Would the new implementation handle this? */
-        time_end_recovered_integer_only = 
-          get_integer_time_end_INTEGER_OPERATIONS_ONLY(current_time, bin);
-        if (time_end_recovered_integer_only == set_time_end){
+        time_end_recovered_integer_only =
+            get_integer_time_end_INTEGER_OPERATIONS_ONLY(current_time, bin);
+        if (time_end_recovered_integer_only == set_time_end) {
           printf("new implementation passes this check.\n");
         } else {
           printf("new implementation also fails this check.\n");
@@ -131,7 +131,7 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
   integertime_t time_end_recovered_integer_only;
 
   /* run over all possible time bins */
-  for (int bin = 1; bin < num_time_bins; bin++) {
+  for (timebin_t bin = 1; bin < num_time_bins; bin++) {
     printf("Running bin %d\n", bin);
 
     dt = get_integer_timestep(bin);
@@ -143,7 +143,7 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
       max_step = max_nr_timesteps / dt;
 
       /* Set the time_end at any step in between there */
-      /* TODO: make specific checks for time_end = 0. For now, assume 
+      /* TODO: make specific checks for time_end = 0. For now, assume
        * smallest time_end = dt */
       set_time_end = (integertime_t)(random_uniform(1, max_step)) * dt;
 
@@ -166,10 +166,10 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
             "displacement=%lld bin=%d\n",
             current_time, set_time_end, dt, displacement, bin);
 
-      time_end_recovered_integer_only = 
-        get_integer_time_end_INTEGER_OPERATIONS_ONLY(current_time, bin);
-      if (time_end_recovered_integer_only != set_time_end){
-        if (current_time == set_time_end){
+      time_end_recovered_integer_only =
+          get_integer_time_end_INTEGER_OPERATIONS_ONLY(current_time, bin);
+      if (time_end_recovered_integer_only != set_time_end) {
+        if (current_time == set_time_end) {
           /* If the displacement was zero, the call will return the end of the
            * next step, not the current one. */
           integertime_t diff = set_time_end - time_end_recovered_integer_only;
@@ -178,25 +178,25 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
                 "time_end incorrect for current == time_end:"
                 "expect=%lld got=%lld diff=%lld;"
                 "current=%lld displacement=%lld, dt=%lld",
-                /* expect = */set_time_end + dt, 
-                /* got = */ time_end_recovered_integer_only, 
-                /* diff = */ set_time_end + dt - time_end_recovered_integer_only,
+                /* expect = */ set_time_end + dt,
+                /* got = */ time_end_recovered_integer_only,
+                /* diff = */ set_time_end + dt -
+                    time_end_recovered_integer_only,
                 current_time, displacement, dt);
         } else {
           /* Something went wrong. */
           error(
-            "time_end incorrect: expect=%lld got=%lld diff=%lld; current=%lld "
-            "displacement=%lld, dt=%lld",
-            set_time_end, time_end_recovered_integer_only, 
-            set_time_end - time_end_recovered_integer_only,
-            current_time, displacement, dt);
+              "time_end incorrect: expect=%lld got=%lld diff=%lld; "
+              "current=%lld "
+              "displacement=%lld, dt=%lld",
+              set_time_end, time_end_recovered_integer_only,
+              set_time_end - time_end_recovered_integer_only, current_time,
+              displacement, dt);
         }
       }
     }
   }
 }
-
-
 
 /**
  * @brief Check the timeline functions.
