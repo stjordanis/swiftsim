@@ -199,12 +199,32 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
 }
 
 /**
+ * @brief test get_time_bin by converting all possible bins
+ * into timesteps and trying to recover the initial bin
+ * by calling get_time_bin()
+ **/
+void test_get_time_bin(void) {
+
+  for (timebin_t bin = 1; bin < num_time_bins; bin++) {
+    integertime_t dt = get_integer_timestep(bin);
+    timebin_t bin_recovered = get_time_bin(dt);
+    if (bin != bin_recovered){
+        error("Expected bin=%d, got=%d", bin, bin_recovered);
+    }
+  }
+
+  printf("Passed %s\n", __func__);
+}
+
+
+/**
  * @brief Check the timeline functions.
  */
 int main(int argc, char* argv[]) {
 
-  test_get_integer_time_end();
-  test_get_integer_time_end_INTEGER_OPERATIONS_ONLY();
+  /* test_get_integer_time_end(); */
+  /* test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(); */
+  test_get_time_bin();
 
   return 0;
 }
