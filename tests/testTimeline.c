@@ -42,7 +42,7 @@ integertime_t get_integer_time_end_INTEGER_OPERATIONS_ONLY(integertime_t ti_curr
  * @brief test get_integer_time_end() function.
  * For each particle time bin, pick a random valid time_end for
  * the dt given by the particle bin; then set a random current_time
- * by subtracting some time intereval < dt from the expected time_end
+ * by subtracting some time interval < dt from the expected time_end
  * and see whether the recovered time_end matches up.
  */
 void test_get_integer_time_end(void) {
@@ -120,7 +120,7 @@ void test_get_integer_time_end(void) {
  * @brief test get_integer_time_end() function.
  * For each particle time bin, pick a random valid time_end for
  * the dt given by the particle bin; then set a random current_time
- * by subtracting some time intereval < dt from the expected time_end
+ * by subtracting some time interval < dt from the expected time_end
  * and see whether the recovered time_end matches up.
  * This version uses integer operations only.
  */
@@ -131,9 +131,6 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
   integertime_t time_end_recovered_integer_only;
 
   /* run over all possible time bins */
-  /* TODO: starting at a higher bin than 0 to verify that this isn't an issue
-   * only for small bins */
-  /* Indeed tests seem to pass for bin > 21 */
   for (int bin = 1; bin < num_time_bins; bin++) {
     printf("Running bin %d\n", bin);
 
@@ -162,17 +159,12 @@ void test_get_integer_time_end_INTEGER_OPERATIONS_ONLY(void) {
       current_time = set_time_end - displacement;
 
       /* Another round of safety checks */
-      /* if (current_time == set_time_end) */
-      /*   printf( */
-      /*       "current==time_end? current=%lld time_end=%lld dt=%lld " */
-      /*       "displacement=%lld bin=%d\n", */
-      /*       current_time, set_time_end, dt, displacement, bin); */
+      /* Note: skipping current_time == set_time_end check. */
       if (current_time > set_time_end)
         printf(
             "current>time_end? current=%lld time_end=%lld dt=%lld "
             "displacement=%lld bin=%d\n",
             current_time, set_time_end, dt, displacement, bin);
-      /* time_end_recovered = get_integer_time_end(current_time, bin); */
 
       time_end_recovered_integer_only = 
         get_integer_time_end_INTEGER_OPERATIONS_ONLY(current_time, bin);
