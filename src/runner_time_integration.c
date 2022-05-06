@@ -812,6 +812,33 @@ if (p->id == PROBLEM_ID)
             const integertime_t ti_rt_beg =
               get_integer_time_begin(ti_current_subcycle + 1, p->rt_data.time_bin);
 
+
+
+
+
+            /* FOR MATTHIEU:
+             * ti_current_subcycle is the current integer time that, opposed to
+             * the ti_current that we use everywhere else, will be updated during
+             * the RT subcycles.
+             * Since the timestep tasks are only called during the regular task calls
+             * and not during the RT subcycles, ti_current == ti_current_subcycle here.*/
+            if (ti_current != ti_current_subcycle) 
+              error("ti_current != ti_current_subcycle");
+
+            /* Get the end time the old way (before recent fix) */
+            integertime_t ti_rt_end_old_version = 
+              get_integer_time_end_old_version(
+                ti_current_subcycle + 1, p->rt_data.time_bin);
+
+            if (ti_rt_end != ti_rt_end_old_version)
+              error("RT end time old and new versions are not equal; old=%lld new=%lld current=%lld time-bin=%d", 
+                  ti_rt_end_old_version, ti_rt_end, ti_current_subcycle, p->rt_data.time_bin);
+
+
+
+
+
+
             ti_rt_end_min = min(ti_rt_end, ti_rt_end_min);
             ti_rt_beg_max = max(ti_rt_beg, ti_rt_beg_max);
             ti_rt_min_step_size = min(c->hydro.ti_rt_min_step_size, ti_rt_min_step_size);
