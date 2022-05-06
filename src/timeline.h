@@ -137,6 +137,16 @@ get_integer_time_end(const integertime_t ti_current, const timebin_t bin) {
   }
 }
 
+__attribute__((const)) static INLINE integertime_t
+get_integer_time_end_old_version(integertime_t ti_current, timebin_t bin) {
+
+  const integertime_t dti = get_integer_timestep(bin);
+  if (dti == 0)
+    return 0;
+  else
+    return dti * ceil((double)ti_current / (double)dti);
+}
+
 /**
  * @brief Returns the highest active time bin at a given point on the time line.
  *
