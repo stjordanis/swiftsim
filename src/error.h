@@ -189,8 +189,8 @@ extern int engine_rank;
  */
 /* #define PROBLEMCELL1 287 */
 /* #define PROBLEMCELL2 74 */
-#define PROBLEMCELL1 151
-#define PROBLEMCELL2 27
+#define PROBLEMCELL1 201
+#define PROBLEMCELL2 72
 
 #ifdef WITH_MPI
 extern int engine_rank;
