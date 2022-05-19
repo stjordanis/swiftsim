@@ -2418,6 +2418,8 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
         MPI_Datatype type = MPI_BYTE; /* Type of the elements */
         void *buff = NULL;            /* Buffer to accept elements */
 
+        celltrace(t->ci, "receiving task subtype %s", subtaskID_names[t->subtype]);
+
         if (t->subtype == task_subtype_tend) {
 
           count = size = t->ci->mpi.pcell_size * sizeof(struct pcell_step);
@@ -2519,6 +2521,10 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
         size_t count = 0;             /* Number of elements to send */
         MPI_Datatype type = MPI_BYTE; /* Type of the elements */
         void *buff = NULL;            /* Buffer to send */
+
+        celltrace(t->ci, "sending task subtype %s", subtaskID_names[t->subtype]);
+        if (t->cj != NULL)
+          celltrace(t->cj, "sending task subtype %s", subtaskID_names[t->subtype]);
 
         if (t->subtype == task_subtype_tend) {
 
