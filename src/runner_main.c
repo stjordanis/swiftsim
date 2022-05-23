@@ -483,6 +483,7 @@ void *runner_main(void *data) {
           break;
 #ifdef WITH_MPI
         case task_type_send:
+          celltrace(t->ci, "caught send subtype %s sendcount=%d", subtaskID_names[t->subtype], t->ci->rt.sendcount);
           if (t->subtype == task_subtype_tend) {
             free(t->buff);
           } else if (t->subtype == task_subtype_sf_counts) {
@@ -496,6 +497,7 @@ void *runner_main(void *data) {
           }
           break;
         case task_type_recv:
+          celltrace(t->ci, "running runner_do_recv subtype %s recvcount=%d", subtaskID_names[t->subtype], t->ci->rt.recvcount);
           if (t->subtype == task_subtype_tend) {
             cell_unpack_end_step(ci, (struct pcell_step *)t->buff);
             free(t->buff);

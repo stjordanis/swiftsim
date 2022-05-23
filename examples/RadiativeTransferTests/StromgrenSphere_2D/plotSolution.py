@@ -68,10 +68,13 @@ def get_snapshot_list(snapshot_basename="output"):
     snaplist = []
 
     if plot_all:
-        dirlist = os.listdir()
-        for f in dirlist:
-            if f.startswith(snapshot_basename) and f.endswith("hdf5"):
-                snaplist.append(f)
+        #  dirlist = os.listdir()
+        #  for f in dirlist:
+        #      if f.startswith(snapshot_basename) and f.endswith("hdf5"):
+        #          snaplist.append(f)
+
+        for i in range(470, 513):
+            snaplist.append("output_{0:04d}.hdf5".format(i))
 
         snaplist = sorted(snaplist)
 
@@ -216,7 +219,7 @@ def plot_result(filename):
             cmap="bone",
         )
         set_colorbar(ax1, im1)
-        ax1.set_title(r"Hydrogen Number Density [cm$^{-3}$]")
+        ax1.set_title(r"Neutral Hydrogen Number Density [cm$^{-3}$]")
     except ValueError:
         print(
             filename,
@@ -235,7 +238,7 @@ def plot_result(filename):
             cmap="cividis",
         )
         set_colorbar(ax2, im2)
-        ax2.set_title("Hydrogen Mass Fraction [1]")
+        ax2.set_title("Neutral Hydrogen Mass Fraction [1]")
     except ValueError:
         print(
             filename,
@@ -308,3 +311,4 @@ if __name__ == "__main__":
 
     for f in snaplist:
         plot_result(f)
+        gc.collect()
