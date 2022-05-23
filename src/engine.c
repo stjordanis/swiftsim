@@ -1683,8 +1683,8 @@ void engine_launch(struct engine *e, const char *call) {
 
   message(
       "======================================================== STARTED LAUNCH "
-      "%s",
-      call);
+      "%s STEP %d",
+      call, e->step);
   fflush(stdout);
 #ifdef SWIFT_DEBUG_CHECKS
   /* Re-set all the cell task counters to 0 */
@@ -1731,8 +1731,8 @@ void engine_launch(struct engine *e, const char *call) {
 
   message(
       "======================================================== FINISHED "
-      "LAUNCH %s",
-      call);
+      "LAUNCH %s STEP %d",
+      call, e->step);
   fflush(stdout);
 }
 
