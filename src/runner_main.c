@@ -182,11 +182,22 @@ void *runner_main(void *data) {
       struct cell *ci = t->ci;
       struct cell *cj = t->cj;
 
-      celltrace(ci, "running %s/%s", taskID_names[t->type],
-      subtaskID_names[t->subtype]);
-      if (cj != NULL)
-        celltrace(cj, "running %s/%s", taskID_names[t->type],
-      subtaskID_names[t->subtype]);
+      if (cj != NULL){
+        celltrace(cj, "running %s/%s cells %lld %lld local %d %d",
+            taskID_names[t->type], subtaskID_names[t->subtype],
+            ci->cellID, cj->cellID, ci->nodeID == engine_rank, cj->nodeID == engine_rank);
+        celltrace(ci, "running %s/%s cells %lld %lld local %d %d",
+            taskID_names[t->type], subtaskID_names[t->subtype],
+            ci->cellID, cj->cellID, ci->nodeID == engine_rank, cj->nodeID == engine_rank);
+      }
+      else {
+        celltrace(ci, "running %s/%s", taskID_names[t->type], subtaskID_names[t->subtype]);
+      }
+
+      /* if (cj != NULL) */
+      /*   message("running %s/%s cells %lld %lld", taskID_names[t->type], subtaskID_names[t->subtype], ci->cellID, cj->cellID); */
+      /* else */
+      /*   message("running %s/%s cell %lld", taskID_names[t->type], subtaskID_names[t->subtype], ci->cellID); */
 
 #ifdef SWIFT_DEBUG_TASKS
       /* Mark the thread we run on */
@@ -483,7 +494,7 @@ void *runner_main(void *data) {
           break;
 #ifdef WITH_MPI
         case task_type_send:
-          celltrace(t->ci, "caught send subtype %s sendcount=%d", subtaskID_names[t->subtype], t->ci->rt.sendcount);
+          celltrace(t->ci, "============ caught SEND subtype %s sendcount=%d", subtaskID_names[t->subtype], t->ci->rt.sendcount);
           if (t->subtype == task_subtype_tend) {
             free(t->buff);
           } else if (t->subtype == task_subtype_sf_counts) {
@@ -497,7 +508,7 @@ void *runner_main(void *data) {
           }
           break;
         case task_type_recv:
-          celltrace(t->ci, "running runner_do_recv subtype %s recvcount=%d", subtaskID_names[t->subtype], t->ci->rt.recvcount);
+          celltrace(t->ci, "=========== caught RECV subtype %s recvcount=%d", subtaskID_names[t->subtype], t->ci->rt.recvcount);
           if (t->subtype == task_subtype_tend) {
             cell_unpack_end_step(ci, (struct pcell_step *)t->buff);
             free(t->buff);
@@ -619,6 +630,18 @@ void *runner_main(void *data) {
       /* This runner is not doing a task anymore */
       r->t = NULL;
 #endif
+
+      /* if (cj != NULL){ */
+      /*   celltrace(cj, "finished %s/%s cells %lld %lld local %d %d", */
+      /*       taskID_names[t->type], subtaskID_names[t->subtype], */
+      /*       ci->cellID, cj->cellID, ci->nodeID == engine_rank, cj->nodeID == engine_rank); */
+      /*   celltrace(ci, "finished %s/%s cells %lld %lld local %d %d", */
+      /*       taskID_names[t->type], subtaskID_names[t->subtype], */
+      /*       ci->cellID, cj->cellID, ci->nodeID == engine_rank, cj->nodeID == engine_rank); */
+      /* } */
+      /* else { */
+      /*   celltrace(ci, "finished %s/%s", taskID_names[t->type], subtaskID_names[t->subtype]); */
+      /* } */
 
       /* We're done with this task, see if we get a next one. */
       prev = t;
