@@ -636,11 +636,12 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         task_get_group_name(ta_type, ta_subtype, ta_cluster);
         task_get_group_name(tb_type, tb_subtype, tb_cluster);
 
-        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
-                tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi, ta_cluster,
-                tb_cluster, count, number_rank, task_in_is_top,
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+                ta_name, tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi,
+                ta_cluster, tb_cluster, count, number_rank, task_in_is_top,
                 task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
-                task_out_is_hydro_super, task_out_is_grav_super, /*cell_has_active_task=*/1);
+                task_out_is_hydro_super, task_out_is_grav_super,
+                /*cell_has_active_task=*/1);
       }
     }
     /* Close the file */
@@ -694,7 +695,8 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
  * @param verbose Are we verbose about this?
  * @param step The current step number.
  */
-void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int step){
+void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
+                                       int step) {
 
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
 
@@ -737,7 +739,6 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
       task_dep[i].task_out_is_hydro_super[j] = 1;
       cell_involved[i][j] = 0;
     }
-
   }
 
   /* loop over all tasks */
@@ -748,7 +749,9 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
     /* Are we using this task?
      * For the 0-step, we wish to show all the tasks (even the inactives). */
     if (step != 0 && ta->skip) continue;
-    if (!(ta->ci->cellID == cellID || (ta->cj != NULL && ta->cj->cellID == cellID))) continue;
+    if (!(ta->ci->cellID == cellID ||
+          (ta->cj != NULL && ta->cj->cellID == cellID)))
+      continue;
 
     /* Current index */
     const int ind = ta->type * task_subtype_count + ta->subtype;
@@ -879,7 +882,8 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
 
     /* Create file */
     char filename[50];
-    sprintf(filename, "dependency_graph_cell_%lld_step_%i_rank_%i.csv", cellID, step, engine_rank);
+    sprintf(filename, "dependency_graph_cell_%lld_step_%i_rank_%i.csv", cellID,
+            step, engine_rank);
     FILE *f = fopen(filename, "w");
     if (f == NULL) error("Error opening dependency graph file.");
 
@@ -942,16 +946,16 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
         task_get_group_name(ta_type, ta_subtype, ta_cluster);
         task_get_group_name(tb_type, tb_subtype, tb_cluster);
 
-        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
-                tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi, ta_cluster,
-                tb_cluster, count, number_rank, task_in_is_top,
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+                ta_name, tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi,
+                ta_cluster, tb_cluster, count, number_rank, task_in_is_top,
                 task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
-                task_out_is_hydro_super, task_out_is_grav_super, cell_involved[i][j]);
+                task_out_is_hydro_super, task_out_is_grav_super,
+                cell_involved[i][j]);
       }
     }
     /* Close the file */
     fclose(f);
-    
   }
 
   /* Clean up after yourself */
@@ -963,7 +967,6 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
 
 #endif /* defined SWIFT_DEBUG_CHECKS || defined CELL_GRAPH */
 }
-
 
 /**
  * @brief Split a hydrodynamic task if too large.
