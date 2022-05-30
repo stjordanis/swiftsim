@@ -584,7 +584,7 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         "task_in,task_out,implicit_in,implicit_out,mpi_in,mpi_out,cluster_in,"
         "cluster_out,number_link,number_rank,task_in_is_top,task_in_is_hydro_"
         "super,task_in_is_grav_super,task_out_is_top,task_out_is_hydro_super,"
-        "task_out_is_grav_super\n");
+        "task_out_is_grav_super,cell_has_active_task\n");
 
     for (int i = 0; i < nber_tasks; i++) {
       for (int j = 0; j < MAX_NUMBER_DEP; j++) {
@@ -636,11 +636,11 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         task_get_group_name(ta_type, ta_subtype, ta_cluster);
         task_get_group_name(tb_type, tb_subtype, tb_cluster);
 
-        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
                 tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi, ta_cluster,
                 tb_cluster, count, number_rank, task_in_is_top,
                 task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
-                task_out_is_hydro_super, task_out_is_grav_super);
+                task_out_is_hydro_super, task_out_is_grav_super, /*cell_has_active_task=*/1);
       }
     }
     /* Close the file */
@@ -890,7 +890,7 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int ste
         "task_in,task_out,implicit_in,implicit_out,mpi_in,mpi_out,cluster_in,"
         "cluster_out,number_link,number_rank,task_in_is_top,task_in_is_hydro_"
         "super,task_in_is_grav_super,task_out_is_top,task_out_is_hydro_super,"
-        "task_out_is_grav_super,cell_involved\n");
+        "task_out_is_grav_super,cell_has_active_task\n");
 
     for (int i = 0; i < nber_tasks; i++) {
       for (int j = 0; j < MAX_NUMBER_DEP; j++) {
