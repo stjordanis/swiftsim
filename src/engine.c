@@ -2385,7 +2385,7 @@ void engine_step(struct engine *e) {
 
   /* Write the dependencies */
   if (e->sched.frequency_dependency != 0 &&
-      e->step % e->sched.frequency_dependency == 0){
+      e->step % e->sched.frequency_dependency == 0) {
     scheduler_write_dependencies(&e->sched, e->verbose, e->step);
     scheduler_write_cell_dependencies(&e->sched, e->verbose, e->step);
   }

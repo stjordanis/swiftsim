@@ -513,10 +513,10 @@ def write_header(f, data, git, opt):
             data["task_in_is_grav_super"][i] == 1,
             True,
             opt.with_calls,
-            opt.with_levels
+            opt.with_levels,
         )
         # Note: In the case where you are plotting a single cell,
-        # any tasks only gets an entry in tasks_in if the specific 
+        # any tasks only gets an entry in tasks_in if the specific
         # cell has an active task of that type.
 
     # do task out
@@ -534,9 +534,9 @@ def write_header(f, data, git, opt):
             data["task_out_is_top"][i] == 1,
             data["task_out_is_hydro_super"][i] == 1,
             data["task_out_is_grav_super"][i] == 1,
-            data["cell_has_active_task"][i] == 1, 
+            data["cell_has_active_task"][i] == 1,
             opt.with_calls,
-            opt.with_levels
+            opt.with_levels,
         )
 
     f.write("\n")
