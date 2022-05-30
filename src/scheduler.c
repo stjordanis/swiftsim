@@ -685,6 +685,287 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
 }
 
 /**
+ * @brief Write a csv file with the task dependencies for a single cell.
+ *
+ * Run plot_task_dependencies.py for an example of how to use it
+ * to generate the figure.
+ *
+ * @param s The #scheduler we are working in.
+ * @param verbose Are we verbose about this?
+ * @param step The current step number.
+ */
+void scheduler_write_cell_dependencies(struct scheduler *s, int verbose, int step){
+
+#if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
+
+  const ticks tic = getticks();
+
+  const long long cellID = s->dependency_graph_cellID;
+  if (cellID == 0LL) return;
+
+  /* Number of possible relations between tasks */
+  const int nber_tasks = task_type_count * task_subtype_count;
+
+  /* To get the table for a task:
+   * ind = (ta * task_subtype_count + sa)
+   * where ta is the value of task_type and sa is the value of
+   * task_subtype  */
+  struct task_dependency *task_dep = (struct task_dependency *)malloc(
+      nber_tasks * sizeof(struct task_dependency));
+
+  /* Keep track whether the requested cell is also involved in the
+   * dependency */
+  int cell_involved[nber_tasks][MAX_NUMBER_DEP];
+
+  if (task_dep == NULL)
+    error("Error allocating memory for task-dependency graph (table).");
+
+  /* Reset counter */
+  for (int i = 0; i < nber_tasks; i++) {
+    /* Assume that the tasks are at all levels and correct later. */
+    task_dep[i].task_in_is_top = 1;
+    task_dep[i].task_in_is_grav_super = 1;
+    task_dep[i].task_in_is_hydro_super = 1;
+
+    for (int j = 0; j < MAX_NUMBER_DEP; j++) {
+      /* Use number_link as indicator of the existance of a relation */
+      task_dep[i].number_link[j] = -1;
+
+      /* Assume that the tasks are at all levels and correct later. */
+      task_dep[i].task_out_is_top[j] = 1;
+      task_dep[i].task_out_is_grav_super[j] = 1;
+      task_dep[i].task_out_is_hydro_super[j] = 1;
+      cell_involved[i][j] = 0;
+    }
+
+  }
+
+  /* loop over all tasks */
+  int local_count = 0;
+  for (int i = 0; i < s->nr_tasks; i++) {
+    const struct task *ta = &s->tasks[i];
+
+    /* Are we using this task?
+     * For the 0-step, we wish to show all the tasks (even the inactives). */
+    if (step != 0 && ta->skip) continue;
+    if (!(ta->ci->cellID == cellID || (ta->cj != NULL && ta->cj->cellID == cellID))) continue;
+
+    /* Current index */
+    const int ind = ta->type * task_subtype_count + ta->subtype;
+    local_count++;
+
+    struct task_dependency *cur = &task_dep[ind];
+
+    /* Set ta */
+    cur->type_in = ta->type;
+    cur->subtype_in = ta->subtype;
+    cur->implicit_in = ta->implicit;
+
+    /* Set the task level. */
+    const struct cell *ci = ta->ci;
+    const struct cell *cj = ta->cj;
+    const int is_ci_top = ci == NULL || (ci != NULL && ci == ci->top);
+    const int is_cj_top = cj == NULL || (cj != NULL && cj == cj->top);
+    const int is_hydro_super =
+        (cj == NULL || (cj != NULL && cj == cj->hydro.super)) &&
+        (ci == NULL || (ci != NULL && ci == ci->hydro.super));
+    const int is_grav_super =
+        (cj == NULL || (cj != NULL && cj == cj->grav.super)) &&
+        (ci == NULL || (ci != NULL && ci == ci->grav.super));
+
+    /* Are we dealing with a task at the top level? */
+    if (!(is_ci_top && is_cj_top)) {
+      cur->task_in_is_top = 0;
+    }
+    /* At the hydro level? */
+    if (!is_hydro_super) {
+      cur->task_in_is_hydro_super = 0;
+    }
+    /* At the gravity level? */
+    if (!is_grav_super) {
+      cur->task_in_is_grav_super = 0;
+    }
+
+    /* and their dependencies */
+    for (int j = 0; j < ta->nr_unlock_tasks; j++) {
+      const struct task *tb = ta->unlock_tasks[j];
+
+      /* Are we using this task?
+       * For the 0-step, we wish to show all the tasks (even the inactive). */
+      if (step != 0 && tb->skip) continue;
+
+      const struct cell *ci_b = tb->ci;
+      const struct cell *cj_b = tb->cj;
+      const int is_ci_b_top =
+          ci_b == NULL || (ci_b != NULL && ci_b == ci_b->top);
+      const int is_cj_b_top =
+          cj_b == NULL || (cj_b != NULL && cj_b == cj_b->top);
+      const int is_b_hydro_super =
+          (cj_b == NULL || (cj_b != NULL && cj_b == cj_b->hydro.super)) &&
+          (ci_b == NULL || (ci_b != NULL && ci_b == ci_b->hydro.super));
+      const int is_b_grav_super =
+          (cj_b == NULL || (cj_b != NULL && cj_b == cj_b->grav.super)) &&
+          (ci_b == NULL || (ci_b != NULL && ci_b == ci_b->grav.super));
+
+      int k = 0;
+      while (k < MAX_NUMBER_DEP) {
+        /* not written yet */
+        if (cur->number_link[k] == -1) {
+          /* set tb */
+          cur->type_out[k] = tb->type;
+          cur->subtype_out[k] = tb->subtype;
+          cur->implicit_out[k] = tb->implicit;
+
+          /* statistics */
+          cur->number_link[k] = 1;
+          cur->number_rank[k] = 1;
+
+          /* Are we dealing with a task at the top level? */
+          if (!(is_ci_b_top && is_cj_b_top)) {
+            cur->task_out_is_top[k] = 0;
+          }
+          /* At the hydro level? */
+          if (!is_b_hydro_super) {
+            cur->task_out_is_hydro_super[k] = 0;
+          }
+          /* At the gravity level? */
+          if (!is_b_grav_super) {
+            cur->task_out_is_grav_super[k] = 0;
+          }
+
+          if (ci_b->cellID == cellID) cell_involved[ind][k]++;
+          if (cj_b != NULL && cj_b->cellID == cellID) cell_involved[ind][k]++;
+
+          break;
+        }
+
+        /* already written */
+        if (cur->type_out[k] == tb->type &&
+            cur->subtype_out[k] == tb->subtype) {
+
+          /* Increase the number of link. */
+          cur->number_link[k] += 1;
+
+          /* Are we dealing with a task at the top level? */
+          if (!(is_ci_b_top && is_cj_b_top)) {
+            cur->task_out_is_top[k] = 0;
+          }
+          /* At the hydro level? */
+          if (!is_b_hydro_super) {
+            cur->task_out_is_hydro_super[k] = 0;
+          }
+          /* At the gravity level? */
+          if (!is_b_grav_super) {
+            cur->task_out_is_grav_super[k] = 0;
+          }
+
+          if (ci_b->cellID == cellID) cell_involved[ind][k]++;
+          if (cj_b != NULL && cj_b->cellID == cellID) cell_involved[ind][k]++;
+
+          break;
+        }
+
+        k += 1;
+      }
+
+      /* MAX_NUMBER_DEP is too small */
+      if (k == MAX_NUMBER_DEP)
+        error("Not enough memory, please increase MAX_NUMBER_DEP");
+    }
+  }
+
+  if (local_count > 0) {
+    /* We have tasks involving the requested cell on this node */
+
+    /* Create file */
+    char filename[50];
+    sprintf(filename, "dependency_graph_cell_%lld_step_%i_rank_%i.csv", cellID, step, engine_rank);
+    FILE *f = fopen(filename, "w");
+    if (f == NULL) error("Error opening dependency graph file.");
+
+    /* Write header */
+    fprintf(f, "# %s\n", git_revision());
+    fprintf(
+        f,
+        "task_in,task_out,implicit_in,implicit_out,mpi_in,mpi_out,cluster_in,"
+        "cluster_out,number_link,number_rank,task_in_is_top,task_in_is_hydro_"
+        "super,task_in_is_grav_super,task_out_is_top,task_out_is_hydro_super,"
+        "task_out_is_grav_super,cell_involved\n");
+
+    for (int i = 0; i < nber_tasks; i++) {
+      for (int j = 0; j < MAX_NUMBER_DEP; j++) {
+        /* Does this link exists */
+        if (task_dep[i].number_link[j] == -1) {
+          continue;
+        }
+
+        /* Define a few variables */
+        const int ta_type = task_dep[i].type_in;
+        const int ta_subtype = task_dep[i].subtype_in;
+        const int ta_implicit = task_dep[i].implicit_in;
+
+        const int tb_type = task_dep[i].type_out[j];
+        const int tb_subtype = task_dep[i].subtype_out[j];
+        const int tb_implicit = task_dep[i].implicit_out[j];
+
+        const int count = task_dep[i].number_link[j];
+        const int number_rank = task_dep[i].number_rank[j];
+
+        const int task_in_is_top = task_dep[i].task_in_is_top;
+        const int task_in_is_grav_super = task_dep[i].task_in_is_grav_super;
+        const int task_in_is_hydro_super = task_dep[i].task_in_is_hydro_super;
+
+        const int task_out_is_top = task_dep[i].task_out_is_top[j];
+        const int task_out_is_grav_super =
+            task_dep[i].task_out_is_grav_super[j];
+        const int task_out_is_hydro_super =
+            task_dep[i].task_out_is_hydro_super[j];
+
+        /* text to write */
+        char ta_name[200];
+        char tb_name[200];
+
+        /* construct line */
+        task_get_full_name(ta_type, ta_subtype, ta_name);
+        task_get_full_name(tb_type, tb_subtype, tb_name);
+
+        /* Check if MPI */
+        int ta_mpi = 0;
+        if (ta_type == task_type_send || ta_type == task_type_recv) ta_mpi = 1;
+
+        int tb_mpi = 0;
+        if (tb_type == task_type_send || tb_type == task_type_recv) tb_mpi = 1;
+
+        /* Get group name */
+        char ta_cluster[20];
+        char tb_cluster[20];
+        task_get_group_name(ta_type, ta_subtype, ta_cluster);
+        task_get_group_name(tb_type, tb_subtype, tb_cluster);
+
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
+                tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi, ta_cluster,
+                tb_cluster, count, number_rank, task_in_is_top,
+                task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
+                task_out_is_hydro_super, task_out_is_grav_super, cell_involved[i][j]);
+      }
+    }
+    /* Close the file */
+    fclose(f);
+    
+  }
+
+  /* Clean up after yourself */
+  free(task_dep);
+
+  if (verbose)
+    message("Printing task graph took %.3f %s.",
+            clocks_from_ticks(getticks() - tic), clocks_getunit());
+
+#endif /* defined SWIFT_DEBUG_CHECKS || defined CELL_GRAPH */
+}
+
+
+/**
  * @brief Split a hydrodynamic task if too large.
  *
  * @param t The #task

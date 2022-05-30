@@ -348,6 +348,7 @@ def write_task(
     task_is_in_top,
     task_is_in_hydro_super,
     task_is_in_grav_super,
+    cell_has_active_task,
     with_calls,
     with_levels,
 ):
@@ -378,6 +379,12 @@ def write_task(
     task_is_in_grav_super: bool
         whether task is in grav super cell
 
+    cell_has_active_task: bool
+        if True, the specific cell you are trying to plot
+        the graph for has an active task of this type. 
+        Otherwise it only unlocks a dependency of some 
+        other cell
+
     with_calls: bool
         if True, write down the function calls
 
@@ -387,8 +394,15 @@ def write_task(
     # generate text
     txt = "\t " + name + "["
 
-    if implicit:
-        txt += "style=filled,fillcolor=grey90,"
+    if not cell_has_active_task:
+        # give this precedence over implicit tasks.
+        # If you're this deep in debugging trouble,
+        # you will most likely know which tasks are
+        # implicit.
+        txt += "style=filled,fillcolor=chocolate,"
+    else:
+        if implicit:
+            txt += "style=filled,fillcolor=grey90,"
     if mpi:
         txt += "shape=diamond,style=filled,fillcolor=azure,"
     if with_levels:
@@ -497,9 +511,13 @@ def write_header(f, data, git, opt):
             data["task_in_is_top"][i] == 1,
             data["task_in_is_hydro_super"][i] == 1,
             data["task_in_is_grav_super"][i] == 1,
+            True,
             opt.with_calls,
-            opt.with_levels,
+            opt.with_levels
         )
+        # Note: In the case where you are plotting a single cell,
+        # any tasks only gets an entry in tasks_in if the specific 
+        # cell has an active task of that type.
 
     # do task out
     for i in range(N):
@@ -516,8 +534,9 @@ def write_header(f, data, git, opt):
             data["task_out_is_top"][i] == 1,
             data["task_out_is_hydro_super"][i] == 1,
             data["task_out_is_grav_super"][i] == 1,
+            data["cell_has_active_task"][i] == 1, 
             opt.with_calls,
-            opt.with_levels,
+            opt.with_levels
         )
 
     f.write("\n")
@@ -650,6 +669,12 @@ def set_task_colours(data):
     want it non-black. the `task_colours` dict is defined
     at the top of this script.
 
+    Additionally, in the case this script is used to plot
+    the task dependencies of a specific cell only, mark
+    whether the cell has an active task of any type found,
+    or whether the task in the dependency list is only being
+    unlocked by it.
+
     Parameters
     ----------
 
@@ -672,8 +697,51 @@ def set_task_colours(data):
         col = get_task_colour(taskname)
         # set the colour
         data.loc[i, "task_colour"] = col
+        depname = data["task_out"][i]
+        act = task_cell_has_active_task(data, depname)
+        data.loc[i, "cell_has_active_task"] = act
 
     return data
+
+
+def task_cell_has_active_task(data, taskname):
+    """
+    For the case this script is used to plot the task 
+    dependencies of a specific cell only, mark whether 
+    the cell has an active task of any type in the data, 
+    or whether the task in the dependency list is only 
+    being unlocked by it.
+
+    Parameters
+    ----------
+
+    data: DataFrame
+        DataFrame of all the tasks
+
+    taskname: str
+        the task name to check for
+
+    Returns
+    -------
+
+    has_active_task: bool
+        whether an active task of this type has been
+        found
+   
+    """
+
+    has_active_task = 0
+
+    dependencies = data["task_out"]
+    ndeps = len(dependencies)
+
+    for i in range(ndeps):
+        if dependencies[i] == taskname:
+            has_active_task = data.loc[i, "cell_involved"] > 0
+            if has_active_task:
+                break
+
+    return has_active_task
 
 
 if __name__ == "__main__":
