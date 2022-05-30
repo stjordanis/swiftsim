@@ -399,7 +399,7 @@ def write_task(
         # If you're this deep in debugging trouble,
         # you will most likely know which tasks are
         # implicit.
-        txt += "style=filled,fillcolor=chocolate,"
+        txt += "style=filled,fillcolor=lightpink2,"
     else:
         if implicit:
             txt += "style=filled,fillcolor=grey90,"
@@ -697,51 +697,8 @@ def set_task_colours(data):
         col = get_task_colour(taskname)
         # set the colour
         data.loc[i, "task_colour"] = col
-        depname = data["task_out"][i]
-        act = task_cell_has_active_task(data, depname)
-        data.loc[i, "cell_has_active_task"] = act
 
     return data
-
-
-def task_cell_has_active_task(data, taskname):
-    """
-    For the case this script is used to plot the task 
-    dependencies of a specific cell only, mark whether 
-    the cell has an active task of any type in the data, 
-    or whether the task in the dependency list is only 
-    being unlocked by it.
-
-    Parameters
-    ----------
-
-    data: DataFrame
-        DataFrame of all the tasks
-
-    taskname: str
-        the task name to check for
-
-    Returns
-    -------
-
-    has_active_task: bool
-        whether an active task of this type has been
-        found
-   
-    """
-
-    has_active_task = 0
-
-    dependencies = data["task_out"]
-    ndeps = len(dependencies)
-
-    for i in range(ndeps):
-        if dependencies[i] == taskname:
-            has_active_task = data.loc[i, "cell_involved"] > 0
-            if has_active_task:
-                break
-
-    return has_active_task
 
 
 if __name__ == "__main__":
