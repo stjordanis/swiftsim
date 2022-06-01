@@ -214,6 +214,9 @@ extern int engine_rank;
 /* #define PROBLEMCELL1 153 */
 /* #define PROBLEMCELL2 -1 */
 
+/* #define PROBLEMCELL1 348 */
+/* #define PROBLEMCELL2 -1 */
+
 /* #define PROBLEMCELL1 159 */
 /* #define PROBLEMCELL2 114 */
 
