@@ -394,7 +394,7 @@ def write_task(
 
     # This feature is used to add tasks to the graph which have
     # no dependencies. While such tasks are not expected to exist,
-    # it might be a helpful debugging feture.
+    # it might be a helpful debugging feature.
     if name == "task_unlocks_nothing":
         return
 
@@ -523,7 +523,7 @@ def write_header(f, data, git, opt):
             opt.with_levels,
         )
         # Note: In the case where you are plotting a single cell,
-        # any tasks only gets an entry in tasks_in if the specific
+        # any task only gets an entry in tasks_in if the specific
         # cell has an active task of that type.
 
     # do task out
@@ -641,7 +641,7 @@ def write_dependencies(f, data):
 
         # This feature is used to add tasks to the graph which have
         # no dependencies. While such tasks are not expected to exist,
-        # it might be a helpful debugging feture.
+        # it might be a helpful debugging feature.
         if tb == "task_unlocks_nothing":
             continue
 
@@ -682,12 +682,6 @@ def set_task_colours(data):
     Set the value of the task colour for the plot if you
     want it non-black. the `task_colours` dict is defined
     at the top of this script.
-
-    Additionally, in the case this script is used to plot
-    the task dependencies of a specific cell only, mark
-    whether the cell has an active task of any type found,
-    or whether the task in the dependency list is only being
-    unlocked by it.
 
     Parameters
     ----------
