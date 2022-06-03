@@ -395,7 +395,8 @@ def write_task(
     # This feature is used to add tasks to the graph which have
     # no dependencies. While such tasks are not expected to exist,
     # it might be a helpful debugging feture.
-    if name == "task_unlocks_nothing": return
+    if name == "task_unlocks_nothing":
+        return
 
     # generate text
     txt = "\t " + name + "["
@@ -641,7 +642,8 @@ def write_dependencies(f, data):
         # This feature is used to add tasks to the graph which have
         # no dependencies. While such tasks are not expected to exist,
         # it might be a helpful debugging feture.
-        if tb == "task_unlocks_nothing": continue
+        if tb == "task_unlocks_nothing":
+            continue
 
         number_link = l["number_link"]
 
