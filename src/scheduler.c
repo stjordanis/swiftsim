@@ -577,7 +577,8 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
       MPI_Reduce(task_dep, recv, nber_tasks, data_type, sum, 0, MPI_COMM_WORLD);
   if (test != MPI_SUCCESS) error("MPI reduce failed");
 
-  test = MPI_Reduce(task_exists, recv_exists, nber_tasks, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  test = MPI_Reduce(task_exists, recv_exists, nber_tasks, MPI_INT, MPI_SUM, 0,
+                    MPI_COMM_WORLD);
   if (test != MPI_SUCCESS) error("MPI reduce failed");
 
   /* free some memory */
@@ -816,9 +817,7 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     }
   }
 
-
-int printed = 0;
-
+  int printed = 0;
 
   /* loop over all tasks */
   int local_count = 0;
@@ -828,15 +827,18 @@ int printed = 0;
     /* Are we using this task?
      * For the 0-step, we wish to show all the tasks (even the inactives). */
     if (step != 0 && ta->skip) continue;
-    if (!( (ta->ci->cellID == cellID) || ((ta->cj != NULL) && ta->cj->cellID == cellID))) continue;
+    if (!((ta->ci->cellID == cellID) ||
+          ((ta->cj != NULL) && ta->cj->cellID == cellID)))
+      continue;
 
     /* Current index */
     const int ind = ta->type * task_subtype_count + ta->subtype;
 
-if (!printed && ta->ci->cellID == cellID) {
-  message("Cell %lld has nodeID %d found on node %d", ta->ci->cellID, ta->ci->nodeID, engine_rank);
-  printed = 1;
-}
+    if (!printed && ta->ci->cellID == cellID) {
+      message("Cell %lld has nodeID %d found on node %d", ta->ci->cellID,
+              ta->ci->nodeID, engine_rank);
+      printed = 1;
+    }
 
     struct task_dependency *cur = &task_dep[ind];
 
