@@ -388,6 +388,11 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
    * task_subtype  */
   struct task_dependency *task_dep = (struct task_dependency *)malloc(
       nber_tasks * sizeof(struct task_dependency));
+  /* keep track of whether a task exists in this run */
+  int *task_exists = (int *)malloc(nber_tasks * sizeof(int));
+  /* keep track of whether a task has a dependency or an unlock,
+   * and hence will be drawn in the task graph */
+  int *task_has_deps = (int *)malloc(nber_tasks * sizeof(int));
 
   if (task_dep == NULL)
     error("Error allocating memory for task-dependency graph (table).");
@@ -408,6 +413,8 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
       task_dep[i].task_out_is_grav_super[j] = 1;
       task_dep[i].task_out_is_hydro_super[j] = 1;
     }
+    task_exists[i] = 0;
+    task_has_deps[i] = 0;
   }
 
   /* loop over all tasks */
@@ -422,6 +429,7 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
     const int ind = ta->type * task_subtype_count + ta->subtype;
 
     struct task_dependency *cur = &task_dep[ind];
+    task_exists[ind]++;
 
     /* Set ta */
     cur->type_in = ta->type;
@@ -460,6 +468,9 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
       /* Are we using this task?
        * For the 0-step, we wish to show all the tasks (even the inactive). */
       if (step != 0 && tb->skip) continue;
+
+      int indj = tb->type * task_subtype_count + tb->subtype;
+      task_exists[indj]++;
 
       const struct cell *ci_b = tb->ci;
       const struct cell *cj_b = tb->cj;
@@ -544,10 +555,12 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
 
   /* create recv buffer */
   struct task_dependency *recv = NULL;
+  int *recv_exists = NULL;
 
   if (s->nodeID == 0) {
     recv = (struct task_dependency *)malloc(nber_tasks *
                                             sizeof(struct task_dependency));
+    recv_exists = (int *)malloc(nber_tasks * sizeof(int));
 
     /* reset counter */
     for (int i = 0; i < nber_tasks; i++) {
@@ -555,6 +568,7 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         /* Use number_link as indicator of the existance of a relation */
         recv[i].number_link[j] = -1;
       }
+      recv_exists[i] = 0;
     }
   }
 
@@ -563,10 +577,15 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
       MPI_Reduce(task_dep, recv, nber_tasks, data_type, sum, 0, MPI_COMM_WORLD);
   if (test != MPI_SUCCESS) error("MPI reduce failed");
 
+  test = MPI_Reduce(task_exists, recv_exists, nber_tasks, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (test != MPI_SUCCESS) error("MPI reduce failed");
+
   /* free some memory */
   if (s->nodeID == 0) {
     free(task_dep);
     task_dep = recv;
+    free(task_exists);
+    task_exists = recv_exists;
   }
 #endif
 
@@ -619,6 +638,11 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         char ta_name[200];
         char tb_name[200];
 
+        /* take note that these tasks have dependencies and unlocks */
+        task_has_deps[i]++;
+        int indj = tb_type * task_subtype_count + tb_subtype;
+        task_has_deps[indj]++;
+
         /* construct line */
         task_get_full_name(ta_type, ta_subtype, ta_name);
         task_get_full_name(tb_type, tb_subtype, tb_name);
@@ -644,6 +668,55 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
                 /*cell_has_active_task=*/1);
       }
     }
+
+    /* Now write the tasks without dependencies */
+    for (int i = 0; i < nber_tasks; i++) {
+
+      if (task_exists[i] && !task_has_deps[i]) {
+
+        /* Define a few variables */
+        const int ta_type = task_dep[i].type_in;
+        const int ta_subtype = task_dep[i].subtype_in;
+        const int ta_implicit = task_dep[i].implicit_in;
+
+        const int tb_implicit = 0;
+
+        const int count = 0;
+        const int number_rank = 1;
+
+        const int task_in_is_top = task_dep[i].task_in_is_top;
+        const int task_in_is_grav_super = task_dep[i].task_in_is_grav_super;
+        const int task_in_is_hydro_super = task_dep[i].task_in_is_hydro_super;
+
+        const int task_out_is_top = -1;
+        const int task_out_is_grav_super = -1;
+        const int task_out_is_hydro_super = -1;
+
+        /* text to write */
+        char ta_name[200];
+        task_get_full_name(ta_type, ta_subtype, ta_name);
+        char *tb_name = "task_unlocks_nothing\0";
+
+        /* Check if MPI */
+        int ta_mpi = 0;
+        if (ta_type == task_type_send || ta_type == task_type_recv) ta_mpi = 1;
+
+        int tb_mpi = 0;
+
+        /* Get group name */
+        char ta_cluster[20];
+        task_get_group_name(ta_type, ta_subtype, ta_cluster);
+        char *tb_cluster = "None\0";
+
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+                ta_name, tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi,
+                ta_cluster, tb_cluster, count, number_rank, task_in_is_top,
+                task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
+                task_out_is_hydro_super, task_out_is_grav_super,
+                /*cell_has_active_task=*/1);
+      }
+    }
+
     /* Close the file */
     fclose(f);
   }
@@ -675,6 +748,8 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
 
   /* Be clean */
   free(task_dep);
+  free(task_exists);
+  free(task_has_deps);
 #ifdef WITH_MPI
   MPI_Type_free(&data_type);
   MPI_Op_free(&sum);
@@ -741,6 +816,10 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     }
   }
 
+
+int printed = 0;
+
+
   /* loop over all tasks */
   int local_count = 0;
   for (int i = 0; i < s->nr_tasks; i++) {
@@ -749,13 +828,15 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     /* Are we using this task?
      * For the 0-step, we wish to show all the tasks (even the inactives). */
     if (step != 0 && ta->skip) continue;
-    if (!(ta->ci->cellID == cellID ||
-          (ta->cj != NULL && ta->cj->cellID == cellID)))
-      continue;
+    if (!( (ta->ci->cellID == cellID) || ((ta->cj != NULL) && ta->cj->cellID == cellID))) continue;
 
     /* Current index */
     const int ind = ta->type * task_subtype_count + ta->subtype;
-    local_count++;
+
+if (!printed && ta->ci->cellID == cellID) {
+  message("Cell %lld has nodeID %d found on node %d", ta->ci->cellID, ta->ci->nodeID, engine_rank);
+  printed = 1;
+}
 
     struct task_dependency *cur = &task_dep[ind];
 
@@ -796,6 +877,9 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
       /* Are we using this task?
        * For the 0-step, we wish to show all the tasks (even the inactive). */
       if (step != 0 && tb->skip) continue;
+
+      /* Found a task with a dependency. */
+      local_count++;
 
       const struct cell *ci_b = tb->ci;
       const struct cell *cj_b = tb->cj;
@@ -875,6 +959,21 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
       if (k == MAX_NUMBER_DEP)
         error("Not enough memory, please increase MAX_NUMBER_DEP");
     }
+
+    /* Some tasks might not unlock anything, like the collect or kick1
+     * tasks. This is expected, and they should turn up in the task graph
+     * because they are being unlocked by some other task. However, if a dev
+     * missed a dependency and has tasks with no unlocks nor dependencies,
+     * they wouldn't show up in the graph. So we write these tasks with no
+     * unlocks down too, but as a special case. */
+    if (ta->nr_unlock_tasks == 0) {
+      cur->number_link[0] = 0;
+      cur->type_out[0] = -1;
+      cur->subtype_out[0] = -1;
+      cur->implicit_out[0] = -1;
+      cur->number_rank[0] = 1;
+      cell_involved[ind][0] = 1;
+    }
   }
 
   if (local_count > 0) {
@@ -931,7 +1030,12 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
 
         /* construct line */
         task_get_full_name(ta_type, ta_subtype, ta_name);
-        task_get_full_name(tb_type, tb_subtype, tb_name);
+        if (tb_type == -1) {
+          /* special handling of tasks which have no unlocks */
+          strcpy(tb_name, "task_unlocks_nothing");
+        } else {
+          task_get_full_name(tb_type, tb_subtype, tb_name);
+        }
 
         /* Check if MPI */
         int ta_mpi = 0;
