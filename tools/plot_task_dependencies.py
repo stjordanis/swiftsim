@@ -391,6 +391,12 @@ def write_task(
     with_levels: bool
         if True, write down level at which tasks are called
     """
+
+    # This feature is used to add tasks to the graph which have
+    # no dependencies. While such tasks are not expected to exist,
+    # it might be a helpful debugging feture.
+    if name == "task_unlocks_nothing": return
+
     # generate text
     txt = "\t " + name + "["
 
@@ -631,6 +637,12 @@ def write_dependencies(f, data):
         # get data
         ta = l["task_in"]
         tb = l["task_out"]
+
+        # This feature is used to add tasks to the graph which have
+        # no dependencies. While such tasks are not expected to exist,
+        # it might be a helpful debugging feture.
+        if tb == "task_unlocks_nothing": continue
+
         number_link = l["number_link"]
 
         # check if already done
