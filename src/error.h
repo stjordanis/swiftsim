@@ -235,12 +235,26 @@ extern int engine_rank;
 #define PROBLEMCELL2 -1
 #define PROBLEMCELL3 -1
 #define PROBLEMCELL4 -1
+#define PROBLEMCELL5 -1
+#define PROBLEMCELL6 -1
 
+/* #define PROBLEMCELL1 18 */
+/* #define PROBLEMCELL2 426002 */
+/* #define PROBLEMCELL3 206 */
+/* #define PROBLEMCELL4 262350 */
+/* #define PROBLEMCELL5 62 */
+/* #define PROBLEMCELL6 458814 */
+
+/* #define PROBLEMCELL5 262205 */
+/* #define PROBLEMCELL6 61 */
+    /* if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 || c->cellID == PROBLEMCELL3 || c->cellID == PROBLEMCELL4)       \ */
 #ifdef WITH_MPI
 extern int engine_rank;
 #define celltrace(c, s, ...)                                          \
   ({                                                                  \
-    if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 || c->cellID == PROBLEMCELL3 || c->cellID == PROBLEMCELL4)       \
+    if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 ||     \
+        c->cellID == PROBLEMCELL3 || c->cellID == PROBLEMCELL4 ||     \
+        c->cellID == PROBLEMCELL5 || c->cellID == PROBLEMCELL6)       \
       printf("[%04i] %s %s: cell %lld local=%d " s "\n", engine_rank, \
              clocks_get_timesincestart(), __FUNCTION__, c->cellID,    \
              c->nodeID == engine_rank, ##__VA_ARGS__);                \
