@@ -64,6 +64,7 @@ extern int engine_rank;
             clocks_get_timesincestart(), __FILE__, __FUNCTION__, __LINE__, \
             ##__VA_ARGS__);                                                \
     memdump(engine_rank);                                                  \
+    fflush(stdout); abort();\
     MPI_Abort(MPI_COMM_WORLD, -1);                                         \
   })
 #else
@@ -231,7 +232,7 @@ extern int engine_rank;
 /* #define PROBLEMCELL3 62 */
 /* #define PROBLEMCELL4 458814 */
 
-#define PROBLEMCELL1 -1
+#define PROBLEMCELL1 426382
 #define PROBLEMCELL2 -1
 #define PROBLEMCELL3 -1
 #define PROBLEMCELL4 -1
