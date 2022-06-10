@@ -440,10 +440,12 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
     const struct cell *ci = ta->ci;
     const struct cell *cj = ta->cj;
 if (ta->type == task_type_none){
-  if (ta->cj != NULL){
+  if (ta->cj != NULL && ta->ci != NULL){
     message("CAUGHT TASK TYPE NONE ci=%lld cj=%lld nr_unlocks=%d", ci->cellID, cj->cellID, ta->nr_unlock_tasks);
-  } else {
+  } else if (ta->ci != NULL){
     message("CAUGHT TASK TYPE NONE ci=%lld nr_unlocks=%d", ci->cellID, ta->nr_unlock_tasks);
+  } else {
+    message("CAUGHT TASK TYPE NONE ci=cj=NULL nr_unlocks=%d", ta->nr_unlock_tasks);
   }
 }
     const int is_ci_top = ci == NULL || (ci != NULL && ci == ci->top);
@@ -781,7 +783,10 @@ if (ta->type == task_type_none){
 void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
                                        int step) {
 
+  message("---------------------------------------- check1");
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
+  message("---------------------------------------- check2");
+  fflush(stdout);
 
   const ticks tic = getticks();
 
@@ -832,6 +837,13 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     /* Are we using this task?
      * For the 0-step, we wish to show all the tasks (even the inactives). */
     if (step != 0 && ta->skip) continue;
+    if ((ta->ci == NULL && ta->cj == NULL)){
+      if (ta->type != task_type_none) {
+        error("caught task type %s/%s without a cell attached", taskID_names[ta->type], subtaskID_names[ta->subtype]);
+      } else {
+        continue;
+      }
+    }
     if (!((ta->ci->cellID == cellID) ||
           ((ta->cj != NULL) && ta->cj->cellID == cellID)))
       continue;
@@ -2305,7 +2317,7 @@ void scheduler_rewait_mapper(void *map_data, int num_elements,
 
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_rt_transport_out){ */
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_rt_ghost2){ */
-if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL2 && t->unlock_tasks[k]->type == task_type_ghost_in){
+if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL6 && t->unlock_tasks[k]->type == task_type_ghost_in){
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_stars_ghost){ */
 
     long long ci = t->ci->cellID;
@@ -2814,7 +2826,7 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
 
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_rt_transport_out){ */
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_rt_ghost2){ */
-if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL2 && t->unlock_tasks[k]->type == task_type_ghost_in){
+if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL6 && t->unlock_tasks[k]->type == task_type_ghost_in){
 /* if (t->unlock_tasks[k]->ci->cellID == PROBLEMCELL1 && t->unlock_tasks[k]->type == task_type_stars_ghost){ */
     long long ci = t->ci->cellID;
     int li = t->ci->nodeID == engine_rank;
