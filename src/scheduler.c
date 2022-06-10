@@ -783,10 +783,7 @@ if (ta->type == task_type_none){
 void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
                                        int step) {
 
-  message("---------------------------------------- check1");
 #if defined(SWIFT_DEBUG_CHECKS) || defined(SWIFT_CELL_GRAPH)
-  message("---------------------------------------- check2");
-  fflush(stdout);
 
   const ticks tic = getticks();
 
