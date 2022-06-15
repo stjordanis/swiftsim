@@ -340,7 +340,8 @@ enum cell_flags {
   cell_flag_do_hydro_sub_sync = (1UL << 18),
   cell_flag_unskip_self_grav_processed = (1UL << 19),
   cell_flag_unskip_pair_grav_processed = (1UL << 20),
-  cell_flag_no_rt_sort = (1UL << 21)
+  cell_flag_no_rt_sort = (1UL << 21),
+  cell_flag_do_rt_sub_sort = (1UL << 22)
 };
 
 /**
@@ -488,6 +489,12 @@ struct cell {
   /*! The list of sub-tasks that have been executed on this cell */
   char subtasks_executed[task_type_count];
 #endif
+
+  int activated_recv;
+  int checked_sort;
+  int activated_sort;
+  int called_sort;
+  int finished_sort;
 
 } SWIFT_STRUCT_ALIGN;
 
