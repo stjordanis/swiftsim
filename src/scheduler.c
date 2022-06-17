@@ -2642,19 +2642,11 @@ if (t->subtype == task_subtype_rt_gradient && s->space->e->step > 1){
 
   int ci_active = cell_is_rt_active(t->ci, s->space->e);
 
-  if (t->ci->rt.rt_in == NULL){
-    error("Send task with NULL rt_in cell %lld", t->ci->cellID);
-  } else {
-    if (!(t->ci->tasks_executed[task_type_rt_in] == 1) && ci_active)
-      error("Send task running without rt_in having run cell %lld", t->ci->cellID);
-  }
+  if (!(t->ci->hydro.super->tasks_executed[task_type_rt_in] == 1) && ci_active)
+    error("Send task running without rt_in having run cell %lld super %lld", t->ci->cellID, t->ci->hydro.super->cellID);
 
-  if (t->ci->rt.rt_ghost1 == NULL){
-    error("Send task with NULL rt_ghost1 cell %lld", t->ci->cellID);
-  } else {
-    if (!(t->ci->tasks_executed[task_type_rt_ghost1] == 1) && ci_active)
-      error("Send task running without rt_ghost1 having run cell %lld", t->ci->cellID);
-  }
+  if (!(t->ci->hydro.super->tasks_executed[task_type_rt_ghost1] == 1) && ci_active)
+    error("Send task running without rt_ghost1 having run cell %lld super %lld", t->ci->cellID, t->ci->hydro.super->cellID);
 
   for (int i = 0; i < t->ci->hydro.count; i++){
     struct part* p = &t->ci->hydro.parts[i];
