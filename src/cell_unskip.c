@@ -662,9 +662,6 @@ void cell_activate_rt_sorts_up(struct cell *c, struct scheduler *s) {
       error("Trying to activate non-existing c->rt.rt_sorts");
 #endif
     if (c->nodeID == engine_rank) {
-      /* TODO for later: check whether we can live without drifts */
-      /* DRIFTCHECK */
-      /* cell_activate_drift_part(c, s); */
       cell_set_flag(c, cell_flag_skip_rt_sort);
       scheduler_activate(s, c->hydro.sorts);
     } else {
@@ -700,9 +697,6 @@ void cell_activate_rt_sorts_up(struct cell *c, struct scheduler *s) {
 #endif
 
         if (parent->nodeID == engine_rank) {
-          /* TODO for later: check whether we can live without drifts */
-          /* DRIFTCHECK */
-          /* cell_activate_drift_part(parent, s); */
           /* Mark the progeny to skip the RT sort as well */
           cell_set_flag(c, cell_flag_skip_rt_sort);
           scheduler_activate(s, parent->hydro.sorts);
@@ -892,8 +886,6 @@ void cell_activate_subcell_hydro_tasks(struct cell *ci, struct cell *cj,
       atomic_or(&cj->hydro.requires_sorts, 1 << sid);
       ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
       cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
-      atomic_or(&ci->checked_sort, 1 << 8);
-      atomic_or(&cj->checked_sort, 1 << 8);
 
       /* Activate the drifts if the cells are local. */
       if (ci->nodeID == engine_rank) cell_activate_drift_part(ci, s);
@@ -908,8 +900,6 @@ void cell_activate_subcell_hydro_tasks(struct cell *ci, struct cell *cj,
       /* Do we need to sort the cells? */
       cell_activate_hydro_sorts(ci, sid, s);
       cell_activate_hydro_sorts(cj, sid, s);
-      atomic_or(&ci->activated_sort, 1 << 8);
-      atomic_or(&cj->activated_sort, 1 << 8);
     }
   } /* Otherwise, pair interation */
 }
@@ -1022,7 +1012,6 @@ void cell_activate_subcell_stars_tasks(struct cell *ci, struct cell *cj,
 
         cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
         ci->stars.dx_max_sort_old = ci->stars.dx_max_sort;
-        atomic_or(&cj->checked_sort, 1 << 5);
 
         /* Activate the drifts if the cells are local. */
         if (ci->nodeID == engine_rank) cell_activate_drift_spart(ci, s);
@@ -1032,7 +1021,6 @@ void cell_activate_subcell_stars_tasks(struct cell *ci, struct cell *cj,
 
         /* Do we need to sort the cells? */
         cell_activate_hydro_sorts(cj, sid, s);
-        atomic_or(&cj->activated_sort, 1 << 6);
         cell_activate_stars_sorts(ci, sid, s);
       }
 
@@ -1044,7 +1032,6 @@ void cell_activate_subcell_stars_tasks(struct cell *ci, struct cell *cj,
 
         ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
         cj->stars.dx_max_sort_old = cj->stars.dx_max_sort;
-        atomic_or(&ci->checked_sort, 1 << 7);
 
         /* Activate the drifts if the cells are local. */
         if (ci->nodeID == engine_rank) cell_activate_drift_part(ci, s);
@@ -1054,7 +1041,6 @@ void cell_activate_subcell_stars_tasks(struct cell *ci, struct cell *cj,
 
         /* Do we need to sort the cells? */
         cell_activate_hydro_sorts(ci, sid, s);
-        atomic_or(&ci->activated_sort, 1 << 7);
         cell_activate_stars_sorts(cj, sid, s);
       }
     }
@@ -1598,11 +1584,7 @@ void cell_activate_subcell_rt_tasks(struct cell *ci, struct cell *cj,
                                              sub_cycle);
         }
       }
-    } else {
-      /* We have reached the bottom of the tree: activate drift */
-      /* DRIFTCHECK */
-      /* cell_activate_drift_part(ci, s); */
-    }
+    } 
   }
 
   /* Otherwise, pair interation */
@@ -1637,11 +1619,6 @@ void cell_activate_subcell_rt_tasks(struct cell *ci, struct cell *cj,
       atomic_or(&cj->hydro.requires_sorts, 1 << sid);
       ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
       cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
-
-      /* Activate the drifts if the cells are local. */
-      /* DRIFTCHECK */
-      /* if (ci->nodeID == engine_rank) cell_activate_drift_part(ci, s); */
-      /* if (cj->nodeID == engine_rank) cell_activate_drift_part(cj, s); */
 
       /* Do we need to sort the cells? */
       cell_activate_rt_sorts(ci, sid, s);
@@ -1706,8 +1683,6 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
         atomic_or(&cj->hydro.requires_sorts, 1 << t->flags);
         ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
         cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
-        atomic_or(&ci->checked_sort, 1 << 1);
-        atomic_or(&cj->checked_sort, 1 << 1);
 
         /* Activate the drift tasks. */
         if (ci_nodeID == nodeID) cell_activate_drift_part(ci, s);
@@ -1721,9 +1696,7 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
 
         /* Check the sorts and activate them if needed. */
         cell_activate_hydro_sorts(ci, t->flags, s);
-        atomic_or(&ci->activated_sort, 1 << 1);
         cell_activate_hydro_sorts(cj, t->flags, s);
-        atomic_or(&cj->activated_sort, 1 << 1);
       }
 
       /* Store current values of dx_max and h_max. */
@@ -1749,7 +1722,6 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
         /* If the local cell is active, receive data from the foreign cell. */
         if (cj_active) {
           scheduler_activate_recv(s, ci->mpi.recv, task_subtype_xv);
-          atomic_or(&ci->activated_recv, 1 << 1);
           if (ci_active) {
             scheduler_activate_recv(s, ci->mpi.recv, task_subtype_rho);
 
@@ -1811,7 +1783,6 @@ int cell_unskip_hydro_tasks(struct cell *c, struct scheduler *s) {
         /* If the local cell is active, receive data from the foreign cell. */
         if (ci_active) {
           scheduler_activate_recv(s, cj->mpi.recv, task_subtype_xv);
-          atomic_or(&cj->activated_recv, 1 << 2);
           if (cj_active) {
             scheduler_activate_recv(s, cj->mpi.recv, task_subtype_rho);
 
@@ -2128,7 +2099,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
           /* hydro for cj */
           atomic_or(&cj->hydro.requires_sorts, 1 << t->flags);
           cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
-          atomic_or(&cj->checked_sort, 1 << 2);
 
           /* Activate the drift tasks. */
           if (ci_nodeID == nodeID) cell_activate_drift_spart(ci, s);
@@ -2139,7 +2109,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
           /* Check the sorts and activate them if needed. */
           cell_activate_stars_sorts(ci, t->flags, s);
           cell_activate_hydro_sorts(cj, t->flags, s);
-          atomic_or(&cj->activated_sort, 1 << 2);
         }
 
         /* Do cj */
@@ -2147,7 +2116,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
           /* hydro for ci */
           atomic_or(&ci->hydro.requires_sorts, 1 << t->flags);
           ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
-          atomic_or(&ci->checked_sort, 1 << 2);
 
           /* stars for cj */
           atomic_or(&cj->stars.requires_sorts, 1 << t->flags);
@@ -2161,7 +2129,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
 
           /* Check the sorts and activate them if needed. */
           cell_activate_hydro_sorts(ci, t->flags, s);
-          atomic_or(&ci->activated_sort, 1 << 2);
           cell_activate_stars_sorts(cj, t->flags, s);
         }
       }
@@ -2198,7 +2165,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
       if (ci_nodeID != nodeID) {
         if (cj_active) {
           scheduler_activate_recv(s, ci->mpi.recv, task_subtype_xv);
-          atomic_or(&ci->activated_recv, 1 << 3);
           scheduler_activate_recv(s, ci->mpi.recv, task_subtype_rho);
 #ifdef EXTRA_STAR_LOOPS
           scheduler_activate_recv(s, ci->mpi.recv, task_subtype_part_prep1);
@@ -2235,7 +2201,6 @@ int cell_unskip_stars_tasks(struct cell *c, struct scheduler *s,
         /* If the local cell is active, receive data from the foreign cell. */
         if (ci_active) {
           scheduler_activate_recv(s, cj->mpi.recv, task_subtype_xv);
-          atomic_or(&cj->activated_recv, 1 << 4);
           scheduler_activate_recv(s, cj->mpi.recv, task_subtype_rho);
 #ifdef EXTRA_STAR_LOOPS
           scheduler_activate_recv(s, cj->mpi.recv, task_subtype_part_prep1);
@@ -3015,27 +2980,12 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
       scheduler_activate(s, t);
 
       if (!sub_cycle) {
-        /* Activate drifts and sorts only during main/normal steps. */
-        /* TODO MLADEN: check if we can live without the drifts, and only
-         * keep the sorts. Currently we make no drift corrections, so it
-         * doesn't matter either way. */
-
-        if (t->type == task_type_self) {
-          /* DRIFTCHECK */
-          /*   if (ci_nodeID == nodeID) cell_activate_drift_part(ci, s); */
-        }
-
-        else if (t->type == task_type_pair) {
+        /* Activate sorts only during main/normal steps. */
+        if (t->type == task_type_pair) {
           atomic_or(&ci->hydro.requires_sorts, 1 << t->flags);
           atomic_or(&cj->hydro.requires_sorts, 1 << t->flags);
           ci->hydro.dx_max_sort_old = ci->hydro.dx_max_sort;
           cj->hydro.dx_max_sort_old = cj->hydro.dx_max_sort;
-
-          /* Activate the drift tasks. */
-          /* TODO: check ich we can live without this */
-          /* DRIFTCHECK */
-          /* if (ci_nodeID == nodeID) cell_activate_drift_part(ci, s); */
-          /* if (cj_nodeID == nodeID) cell_activate_drift_part(cj, s); */
 
           /* Check the sorts and activate them if needed. */
           cell_activate_rt_sorts(ci, t->flags, s);
@@ -3087,12 +3037,6 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
           scheduler_activate_send(s, cj->mpi.send, task_subtype_rt_gradient,
                                   ci_nodeID);
 
-          /* Drift the cell which will be sent; note that not all sent
-             particles will be drifted, only those that are needed. */
-          /* TODO: check whether we can live without this */
-          /* DRIFTCHECK */
-          /* cell_activate_drift_part(cj, s); */
-
           if (cj_active) {
             scheduler_activate_send(s, cj->mpi.send, task_subtype_rt_transport,
                                     ci_nodeID);
@@ -3125,12 +3069,6 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
 
           scheduler_activate_send(s, ci->mpi.send, task_subtype_rt_gradient,
                                   cj_nodeID);
-
-          /* Drift the cell which will be sent; note that not all sent
-             particles will be drifted, only those that are needed. */
-          /* TODO: check whether we can live without this */
-          /* DRIFTCHECK */
-          /* cell_activate_drift_part(ci, s); */
 
           if (ci_active) {
             scheduler_activate_send(s, ci->mpi.send, task_subtype_rt_transport,
