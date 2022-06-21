@@ -588,35 +588,28 @@ void cell_activate_limiter(struct cell *c, struct scheduler *s) {
  * @brief Activate the sorts up a cell hierarchy.
  */
 void cell_activate_hydro_sorts_up(struct cell *c, struct scheduler *s) {
-
   if (c == c->hydro.super) {
 #ifdef SWIFT_DEBUG_CHECKS
     if (c->hydro.sorts == NULL)
       error("Trying to activate un-existing c->hydro.sorts");
 #endif
     scheduler_activate(s, c->hydro.sorts);
-
     cell_set_flag(c, cell_flag_skip_rt_sort);
     if (c->nodeID == engine_rank) cell_activate_drift_part(c, s);
   } else {
-
     for (struct cell *parent = c->parent;
          parent != NULL && !cell_get_flag(parent, cell_flag_do_hydro_sub_sort);
          parent = parent->parent) {
       cell_set_flag(parent, cell_flag_do_hydro_sub_sort);
-
       if (parent == c->hydro.super) {
-
 #ifdef SWIFT_DEBUG_CHECKS
         if (parent->hydro.sorts == NULL)
           error("Trying to activate un-existing parents->hydro.sorts");
 #endif
         scheduler_activate(s, parent->hydro.sorts);
-
         cell_set_flag(parent, cell_flag_skip_rt_sort);
         if (parent->nodeID == engine_rank) cell_activate_drift_part(parent, s);
         break;
-      } else {
       }
     }
   }
@@ -627,7 +620,6 @@ void cell_activate_hydro_sorts_up(struct cell *c, struct scheduler *s) {
  */
 void cell_activate_hydro_sorts(struct cell *c, int sid, struct scheduler *s) {
   /* Do we need to re-sort? */
-
   if (c->hydro.dx_max_sort > space_maxreldx * c->dmin) {
     /* Climb up the tree to active the sorts in that direction */
     for (struct cell *finger = c; finger != NULL; finger = finger->parent) {
@@ -673,17 +665,9 @@ void cell_activate_rt_sorts_up(struct cell *c, struct scheduler *s) {
          parent != NULL && !cell_get_flag(parent, cell_flag_do_rt_sub_sort);
          parent = parent->parent) {
 
-      /* We can't decide during the RT sorts activation whether foreign
-       * cells should run RT sorts or hydro sorts. So we can't mark them
-       * with the cell_flag_do_hydro_sub_sort flag here, because having
-       * that flag ends the upwards climb in cell_activate_hydro_sorts_up
-       * early, and assumes that the hydro sort is active already. So only
-       * set this flag for local cells. */
-      /* if (parent->nodeID == engine_rank) cell_set_flag(parent,
-       * cell_flag_do_hydro_sub_sort); */
-      /* Need a separate flag for RT because RT sorts don't necessarily
-       * activate the hydro sorts tasks, but the do_hydro_sub_sort flag
-       * is used as an early exit while climbing up the tree */
+      /* Need a separate flag for RT sub sorts because RT sorts don't
+       * necessarily activate the hydro sorts tasks, yet the do_hydro_sub_sort
+       * flag is used as an early exit while climbing up the tree. */
       cell_set_flag(parent, cell_flag_do_rt_sub_sort);
       cell_set_flag(parent, cell_flag_do_rt_sort);
 
@@ -736,7 +720,7 @@ void cell_activate_rt_sorts(struct cell *c, int sid, struct scheduler *s) {
 /**
  * @brief Mark cells up a hierarchy to not run RT sorts.
  * */
-void cell_set_no_rt_sort_flag_up(struct cell *c) {
+void cell_set_skip_rt_sort_flag_up(struct cell *c) {
 
   for (struct cell *finger = c; finger != NULL; finger = finger->parent) {
     cell_set_flag(finger, cell_flag_skip_rt_sort);
@@ -857,7 +841,6 @@ void cell_activate_subcell_hydro_tasks(struct cell *ci, struct cell *cj,
 
   /* Otherwise, pair interation */
   else {
-
     /* Should we even bother? */
     if (!cell_is_active_hydro(ci, e) && !cell_is_active_hydro(cj, e)) return;
     if (ci->hydro.count == 0 || cj->hydro.count == 0) return;
@@ -1540,7 +1523,7 @@ void cell_activate_subcell_external_grav_tasks(struct cell *ci,
 }
 
 /**
- * @brief Traverse a sub-cell task and activate the hydro sort tasks that are
+ * @brief Traverse a sub-cell task and activate the sort tasks that are
  * required by a RT task
  *
  * @param ci The first #cell we recurse in.
@@ -1584,7 +1567,7 @@ void cell_activate_subcell_rt_tasks(struct cell *ci, struct cell *cj,
                                              sub_cycle);
         }
       }
-    } 
+    }
   }
 
   /* Otherwise, pair interation */
@@ -3014,15 +2997,15 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
 
         /* If the local cell is active, receive data from the foreign cell. */
         if (cj_active) {
-
           scheduler_activate_recv(s, ci->mpi.recv, task_subtype_rt_gradient);
           if (sub_cycle) {
-            /* If we're in a sub-cycle, then there are no sorts. Make sure the
-             * cells are also marked correctly, otherwise the 'sorted' flags
-             * will be wrongly set after a recv rt_gradient. The recv tasks
-             * might also run on a higher level than the current cell, so walk
-             * all the way up. */
-            cell_set_no_rt_sort_flag_up(ci);
+            /* If we're in a sub-cycle, then there are should be no sorts. But
+             * since hydro sorts won't be active then, the RT sorts would run.
+             * Make sure the cells are also marked to skip the RT sorts,
+             * otherwise the 'sorted' flags will be wrongly set after a
+             * recv rt_gradient. The recv tasks might also run on a higher level
+             * than the current cell, so walk all the way up. */
+            cell_set_skip_rt_sort_flag_up(ci);
           }
 
           /* We only need updates later on if the other cell is active too */
@@ -3049,16 +3032,11 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
         if (ci_active) {
           scheduler_activate_recv(s, cj->mpi.recv, task_subtype_rt_gradient);
           if (sub_cycle) {
-            /* If we're in a sub-cycle, then there are no sorts. Make sure the
-             * cells are also marked correctly, otherwise the 'sorted' flags
-             * will be wrongly set after a recv rt_gradient. The recv tasks
-             * might also run on a higher level than the current cell, so walk
-             * all the way up. */
-            cell_set_no_rt_sort_flag_up(cj);
+            /* No RT sorts during sub-cycling */
+            cell_set_skip_rt_sort_flag_up(cj);
           }
 
-          /* We only need updates later on if the other cell is active as well
-           */
+          /* We only need updates later on if the other cell is active too */
           if (cj_active) {
             scheduler_activate_recv(s, cj->mpi.recv, task_subtype_rt_transport);
           }

@@ -637,9 +637,9 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
         task_get_group_name(ta_type, ta_subtype, ta_cluster);
         task_get_group_name(tb_type, tb_subtype, tb_cluster);
 
-        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d\n",
-                ta_name, tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi,
-                ta_cluster, tb_cluster, count, number_rank, task_in_is_top,
+        fprintf(f, "%s,%s,%d,%d,%d,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d\n", ta_name,
+                tb_name, ta_implicit, tb_implicit, ta_mpi, tb_mpi, ta_cluster,
+                tb_cluster, count, number_rank, task_in_is_top,
                 task_in_is_hydro_super, task_in_is_grav_super, task_out_is_top,
                 task_out_is_hydro_super, task_out_is_grav_super);
       }
