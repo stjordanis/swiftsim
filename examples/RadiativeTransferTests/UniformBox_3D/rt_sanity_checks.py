@@ -188,14 +188,8 @@ def check_hydro_sanity(snapdata, rundata):
         # at least the number of calls to transport interactions
         # in RT interactions
         # --------------------------------------------------------------
-        if rundata.with_mpi:
-            check = False
-            if not warning_printed:
-                print("- MPI run: skipping hydro sanity interaction call count checks")
-                warning_printed = True
-        else:
-            fishy = gas.RTCallsIactTransportInteraction < gas.RTCallsIactGradientInteraction
-            check = fishy.any()
+        fishy = gas.RTCallsIactTransportInteraction < gas.RTCallsIactGradientInteraction
+        check = fishy.any()
         if check:
             print("- checking hydro sanity pt2.5; snapshot", snap.snapnr)
             print(
@@ -287,6 +281,11 @@ def check_stars_hydro_interaction_sanity(snapdata, rundata):
     # ----------------------------------------------
     # check absolute values of every snapshot
     # ----------------------------------------------
+
+    #  if rundata.with_mpi:
+    #      print("- MPI run: skipping hydro vs stars sanity interaction call count checks")
+    #      return
+
     for snap in snapdata:
 
         gas = snap.gas
@@ -296,13 +295,23 @@ def check_stars_hydro_interaction_sanity(snapdata, rundata):
         # check that we didn't lose any radiation
         # --------------------------------------------------------------
         sum_gas_tot_radiation = gas.RadiationAbsorbedTot.sum()
+        sum_star_tot_radiation = 0
         if snap.has_stars:
             sum_star_tot_radiation = stars.RadiationEmittedTot.sum()
         else:
             print("Found no stars")
-            sum_star_tot_radiation = 0.0
 
         if sum_gas_tot_radiation != sum_star_tot_radiation:
+
+            diff = 0
+            with np.errstate(over='raise'):
+                try:
+                    diff = sum_star_tot_radiation - sum_gas_tot_radiation
+                except FloatingPointError:
+                    # the arrays are written as unsigned ints. Overflows
+                    # may occur if one is bigger than the other.
+                    diff = sum_gas_tot_radiation - sum_star_tot_radiation
+
             print("- checking hydro v star sanity pt1; snapshot", snap.snapnr)
             print(
                 "--- Total emitted and absorbed radiation not equal: Gas",
@@ -310,7 +319,7 @@ def check_stars_hydro_interaction_sanity(snapdata, rundata):
                 "stars",
                 sum_star_tot_radiation,
                 "diff",
-                sum_star_tot_radiation - sum_gas_tot_radiation,
+                diff
             )
             if break_on_diff:
                 quit()
@@ -358,7 +367,6 @@ def main():
     check_stars_hydro_interaction_sanity(snapdata, rundata)
 
     return
-
 
 if __name__ == "__main__":
     main()

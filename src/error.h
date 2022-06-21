@@ -64,9 +64,7 @@ extern int engine_rank;
             clocks_get_timesincestart(), __FILE__, __FUNCTION__, __LINE__, \
             ##__VA_ARGS__);                                                \
     memdump(engine_rank);                                                  \
-    fflush(stdout);                                                        \
-    swift_abort(1);                                                        \
-    MPI_Abort(MPI_COMM_WORLD, -6);                                         \
+    MPI_Abort(MPI_COMM_WORLD, -1);                                         \
   })
 #else
 extern int engine_rank;
@@ -184,124 +182,5 @@ extern int engine_rank;
     }                                                                         \
   })
 #endif
-
-/**
- * @brief Macro to trace a cell throughout the code
- *
- */
-/* #define PROBLEMCELL1 287 */
-/* #define PROBLEMCELL2 74 */
-
-/* #define PROBLEMCELL1 121 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 72 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 80 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 129 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL2 151 */
-/* #define PROBLEMCELL1 27 */
-
-/* #define PROBLEMCELL1 -1 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 27 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 153 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 348 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 159 */
-/* #define PROBLEMCELL2 114 */
-
-/* #define PROBLEMCELL1 201 */
-/* #define PROBLEMCELL2 72 */
-
-/* #define PROBLEMCELL1 245 */
-/* #define PROBLEMCELL2 -1 */
-
-/* #define PROBLEMCELL1 455 */
-/* #define PROBLEMCELL2 295367 */
-/* #define PROBLEMCELL3 62 */
-/* #define PROBLEMCELL4 458814 */
-
-// #define PROBLEMCELL1 426382
-// #define PROBLEMCELL1 8232769717858
-// #define PROBLEMCELL2 65407374362210
-// #define PROBLEMCELL3 43417141806690
-// #define PROBLEMCELL4 1634
-// #define PROBLEMCELL5 296546
-// #define PROBLEMCELL6 -1
-
-/* #define PROBLEMCELL1 277 */
-/* #define PROBLEMCELL2 491797 */
-/* #define PROBLEMCELL1 327951 */
-/* #define PROBLEMCELL2 327757 */
-/* #define PROBLEMCELL3 271 */
-/* #define PROBLEMCELL4 77 */
-
-// #define PROBLEMCELL1 1312
-// #define PROBLEMCELL2 209
-// #define PROBLEMCELL3 210
-// #define PROBLEMCELL4 360658
-// #define PROBLEMCELL5 199
-// #define PROBLEMCELL6 458951
-#define PROBLEMCELL1 -1
-#define PROBLEMCELL2 -1
-#define PROBLEMCELL3 -1
-#define PROBLEMCELL4 -1
-#define PROBLEMCELL5 -1
-#define PROBLEMCELL6 -1
-
-// #define PROBLEMCELL1 18
-/* #define PROBLEMCELL1 18 */
-/* #define PROBLEMCELL2 426002 */
-/* #define PROBLEMCELL3 206 */
-/* #define PROBLEMCELL4 262350 */
-/* #define PROBLEMCELL5 62 */
-/* #define PROBLEMCELL6 458814 */
-
-/* #define PROBLEMCELL5 262205 */
-/* #define PROBLEMCELL6 61 */
-/* if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 || c->cellID ==
- * PROBLEMCELL3 || c->cellID == PROBLEMCELL4)       \ */
-#ifdef WITH_MPI
-extern int engine_rank;
-#define celltrace(c, s, ...)                                          \
-  ({                                                                  \
-    if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 ||     \
-        c->cellID == PROBLEMCELL3 || c->cellID == PROBLEMCELL4 ||     \
-        c->cellID == PROBLEMCELL5 || c->cellID == PROBLEMCELL6)       \
-      printf("[%04i] %s %s: cell %lld local=%d " s "\n", engine_rank, \
-             clocks_get_timesincestart(), __FUNCTION__, c->cellID,    \
-             c->nodeID == engine_rank, ##__VA_ARGS__);                \
-    fflush(stdout);                                                   \
-  })
-#else
-#define celltrace(c, s, ...)                                          \
-  ({                                                                  \
-    if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2)       \
-      printf("%s %s: cell %lld " s "\n", clocks_get_timesincestart(), \
-             __FUNCTION__, c->cellID, ##__VA_ARGS__);                 \
-    fflush(stdout);                                                   \
-  })
-#endif
-
-#define PROBLEMPART -1
-#define parttrace(p, s, ...)                                          \
-  ({                                                                  \
-    if (p->id == PROBLEMPART)                                         \
-      printf("%s %s: PART %lld " s "\n", clocks_get_timesincestart(), \
-             __FUNCTION__, p->id, ##__VA_ARGS__);                     \
-    fflush(stdout);                                                   \
-  })
 
 #endif /* SWIFT_ERROR_H */
