@@ -271,7 +271,8 @@ extern int engine_rank;
 
 /* #define PROBLEMCELL5 262205 */
 /* #define PROBLEMCELL6 61 */
-    /* if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 || c->cellID == PROBLEMCELL3 || c->cellID == PROBLEMCELL4)       \ */
+/* if (c->cellID == PROBLEMCELL1 || c->cellID == PROBLEMCELL2 || c->cellID ==
+ * PROBLEMCELL3 || c->cellID == PROBLEMCELL4)       \ */
 #ifdef WITH_MPI
 extern int engine_rank;
 #define celltrace(c, s, ...)                                          \
@@ -302,6 +303,5 @@ extern int engine_rank;
              __FUNCTION__, p->id, ##__VA_ARGS__);                     \
     fflush(stdout);                                                   \
   })
-
 
 #endif /* SWIFT_ERROR_H */
