@@ -3099,6 +3099,9 @@ int cell_unskip_rt_tasks(struct cell *c, struct scheduler *s,
       scheduler_activate(s, c->rt.rt_transport_out);
     if (c->rt.rt_tchem != NULL) scheduler_activate(s, c->rt.rt_tchem);
     /* This is for foreign cells */
+    /* TODO MLADEN: the rt_advance_cell_time task should now always
+     * be at the super level. Remove this later and check that everyting
+     * still runs as it should.. */
     if (c->rt.rt_advance_cell_time != NULL)
       scheduler_activate(s, c->rt.rt_advance_cell_time);
     /* This is for local cells */

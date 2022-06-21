@@ -147,8 +147,6 @@ void runner_do_kick1(struct runner *r, struct cell *c, const int timer) {
       /* If particle needs to be kicked */
       if (part_is_starting(p, e)) {
 
-        p->rt_data.called_in_kick1++;
-
 #ifdef SWIFT_DEBUG_CHECKS
         if (p->limiter_data.wakeup != time_bin_not_awake)
           error("Woken-up particle that has not been processed in kick1");
@@ -421,8 +419,6 @@ void runner_do_kick2(struct runner *r, struct cell *c, const int timer) {
       /* If particle needs to be kicked */
       if (part_is_active(p, e)) {
 
-        p->rt_data.called_in_kick2++;
-
 #ifdef SWIFT_DEBUG_CHECKS
         if (p->limiter_data.wakeup != time_bin_not_awake)
           error("Woken-up particle that has not been processed in kick1");
@@ -693,6 +689,7 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
 
   /* No children? */
   if (!c->split) {
+
     /* Loop over the particles in this cell. */
     for (int k = 0; k < count; k++) {
 
@@ -723,7 +720,7 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         const integertime_t ti_new_step = get_part_timestep(p, xp, e);
 
         /* Get RT time-step size (note <= hydro step size) */
-        /* TODO: enforce <= hydro step size */
+        /* TODO MLADEN: enforce <= hydro step size */
         const integertime_t ti_rt_new_step = get_part_rt_timestep(p, xp, e);
 
         /* Update particle */
@@ -1657,7 +1654,7 @@ void runner_do_collect_rt_times(struct runner *r, struct cell *c,
 
   integertime_t ti_rt_end_min = max_nr_timesteps, ti_rt_beg_max = 0;
 
-  /* TODO: add debugging checks here.
+  /* TODO MLADEN: add debugging checks here.
    * - the rt_advance_cell_time task needs to have finished first.
    * - this task must never run in the same step/cycle as a timestep
    *   task.

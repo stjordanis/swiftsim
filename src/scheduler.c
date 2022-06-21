@@ -388,7 +388,6 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
    * task_subtype  */
   struct task_dependency *task_dep = (struct task_dependency *)malloc(
       nber_tasks * sizeof(struct task_dependency));
-  /* keep track of whether a task exists in this run */
 
   if (task_dep == NULL)
     error("Error allocating memory for task-dependency graph (table).");
@@ -644,7 +643,6 @@ void scheduler_write_dependencies(struct scheduler *s, int verbose, int step) {
                 task_out_is_hydro_super, task_out_is_grav_super);
       }
     }
-
     /* Close the file */
     fclose(f);
   }
@@ -1999,20 +1997,6 @@ void scheduler_enqueue(struct scheduler *s, struct task *t) {
     t->skip = 1;
     for (int j = 0; j < t->nr_unlock_tasks; j++) {
       struct task *t2 = t->unlock_tasks[j];
-
-      /* if (t2->type == task_type_send &&
-       * t2->subtype==task_subtype_rt_gradient)  */
-      /*   message("cell %lld unlocking send rt_gradient from %s/%s wait=%d
-       * skip=%d",  */
-      /*   t2->ci->cellID, taskID_names[t->type], subtaskID_names[t->subtype],
-       * t2->wait, t2->skip); */
-      /* if (t2->type == task_type_recv &&
-       * t2->subtype==task_subtype_rt_gradient)  */
-      /*   message("cell %lld unlocking recv rt_gradient from %s/%s wait=%d
-       * skip=%d",  */
-      /*   t2->ci->cellID, taskID_names[t->type], subtaskID_names[t->subtype],
-       * t2->wait, t2->skip); */
-      /*  */
       if (atomic_dec(&t2->wait) == 1) scheduler_enqueue(s, t2);
     }
   }
@@ -2306,29 +2290,6 @@ struct task *scheduler_done(struct scheduler *s, struct task *t) {
   for (int k = 0; k < t->nr_unlock_tasks; k++) {
     struct task *t2 = t->unlock_tasks[k];
     if (t2->skip) continue;
-
-    /* if (t2->type == task_type_send && t2->subtype==task_subtype_rt_gradient)
-     */
-    /*   message("cell %lld unlocking send rt_gradient from %s/%s wait=%d
-     * skip=%d",  */
-    /*   t2->ci->cellID, taskID_names[t->type], subtaskID_names[t->subtype],
-     * t2->wait, t2->skip); */
-    /* if (t2->type == task_type_recv && t2->subtype==task_subtype_rt_gradient)
-     */
-    /*   message("cell %lld unlocking recv rt_gradient from %s/%s wait=%d
-     * skip=%d",  */
-    /*   t2->ci->cellID, taskID_names[t->type], subtaskID_names[t->subtype],
-     * t2->wait, t2->skip); */
-    /* if (t->type == task_type_recv && t->subtype==task_subtype_rt_gradient) {
-     */
-    /*   long long ci = t2->ci->cellID; */
-    /*   long long cj = -1; */
-    /*   if (t2->cj != NULL) cj = t2->cj->cellID; */
-    /*   message("cell %lld/%lld %s/%s unlockied BY recv rt_grad of cell %lld",
-     */
-    /*   ci, cj, taskID_names[t2->type], subtaskID_names[t2->subtype],
-     * t->ci->cellID); */
-    /* } */
 
     const int res = atomic_dec(&t2->wait);
     if (res < 1) {

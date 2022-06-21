@@ -1075,4 +1075,3 @@ void runner_do_rt_tchem(struct runner *r, struct cell *c, int timer) {
 
   if (timer) TIMER_TOC(timer_end_rt_tchem);
 }
-

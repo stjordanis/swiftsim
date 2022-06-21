@@ -143,8 +143,6 @@
  *
  * @param data A pointer to this thread's data.
  */
-#pragma GCC push_options
-#pragma GCC optimize("O0")
 void *runner_main(void *data) {
 
   struct runner *r = (struct runner *)data;
@@ -642,7 +640,6 @@ void *runner_main(void *data) {
 
   /* Be kind, rewind. */
   return NULL;
-#pragma GCC pop_options
 }
 
 ticks runner_get_active_time(const struct runner *restrict r) {
