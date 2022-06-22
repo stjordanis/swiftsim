@@ -491,12 +491,6 @@ struct cell {
   char subtasks_executed[task_type_count];
 #endif
 
-  int activated_recv;
-  int checked_sort;
-  int activated_sort;
-  int called_sort;
-  int finished_sort;
-
 } SWIFT_STRUCT_ALIGN;
 
 /* Convert cell location to ID. */
