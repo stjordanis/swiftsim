@@ -865,6 +865,11 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     }
   }
 
+<<<<<<< HEAD
+=======
+  int printed = 0;
+
+>>>>>>> 4440501bd... applied code formatting tools
   /* loop over all tasks */
   int local_count = 0;
   for (int i = 0; i < s->nr_tasks; i++) {
@@ -873,13 +878,27 @@ void scheduler_write_cell_dependencies(struct scheduler *s, int verbose,
     /* Are we using this task?
      * For the 0-step, we wish to show all the tasks (even the inactives). */
     if (step != 0 && ta->skip) continue;
+<<<<<<< HEAD
     /* Note: task_type_none may have t->ci==NULL too */
     if (!(((ta->ci != NULL) && ta->ci->cellID == cellID) ||
+=======
+    if (!((ta->ci->cellID == cellID) ||
+>>>>>>> 4440501bd... applied code formatting tools
           ((ta->cj != NULL) && ta->cj->cellID == cellID)))
       continue;
 
     /* Current index */
     const int ind = ta->type * task_subtype_count + ta->subtype;
+<<<<<<< HEAD
+=======
+
+    if (!printed && ta->ci->cellID == cellID) {
+      message("Cell %lld has nodeID %d found on node %d", ta->ci->cellID,
+              ta->ci->nodeID, engine_rank);
+      printed = 1;
+    }
+
+>>>>>>> 4440501bd... applied code formatting tools
     struct task_dependency *cur = &task_dep[ind];
 
     /* Set ta */

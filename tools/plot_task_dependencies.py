@@ -394,7 +394,11 @@ def write_task(
 
     # This feature is used to add tasks to the graph which have
     # no dependencies. While such tasks are not expected to exist,
+<<<<<<< HEAD
     # it might be a helpful debugging feature.
+=======
+    # it might be a helpful debugging feture.
+>>>>>>> 4440501bd... applied code formatting tools
     if name == "task_unlocks_nothing":
         return
 
@@ -641,7 +645,11 @@ def write_dependencies(f, data):
 
         # This feature is used to add tasks to the graph which have
         # no dependencies. While such tasks are not expected to exist,
+<<<<<<< HEAD
         # it might be a helpful debugging feature.
+=======
+        # it might be a helpful debugging feture.
+>>>>>>> 4440501bd... applied code formatting tools
         if tb == "task_unlocks_nothing":
             continue
 
