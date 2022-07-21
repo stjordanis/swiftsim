@@ -59,6 +59,9 @@ You need to provide the following runtime parameters in the yaml file:
 
        stellar_spectrum_type: 0                           # Which radiation spectrum to use. 0: constant. 1: blackbody spectrum.
 
+   TimeIntegration:
+       max_nr_rt_subcycles: 128         # maximal number of RT subcycles per hydro step
+
 The ``photon_groups`` need to be ``N - 1`` frequency edges (floats) to separate 
 the spectrum into ``N`` groups. The outer limits of zero and infinity are 
 assumed.
@@ -89,7 +92,9 @@ to select between:
     - In this case, you need to provide also temperature of the blackbody via the 
       ``stellar_spectrum_blackbody_temperature_K`` parameter.
 
-
+Finally, you will also need to provide an upper threshold for the number of 
+RT-subcycles w.r.t. a single hydro step via ``TimeIntegration:max_nr_rt_subcycles``.
+For more details, refer to :ref:`the subcycling documentation <rt_subcycling>`.
 
 
 
