@@ -143,6 +143,10 @@ int engine_rank;
 /** The current step of the engine as a global variable (for messages). */
 int engine_current_step;
 
+#ifdef SWIFT_DEBUG_CHECKS
+extern int activate_by_unskip;
+#endif
+
 /**
  * @brief Link a density/force task to a cell.
  *
@@ -1356,8 +1360,32 @@ void engine_rebuild(struct engine *e, const int repartitioned,
 #endif
 
   /* Run through the tasks and mark as skip or not. */
+#ifdef SWIFT_DEBUG_CHECKS
+
+  activate_by_unskip = 1;
+#endif
   engine_unskip(e);
   if (e->forcerebuild) error("engine_unskip faled after a rebuild!");
+
+#ifdef SWIFT_DEBUG_CHECKS
+
+  activate_by_unskip = 0;
+  engine_marktasks(e);
+
+  for (int i = 0; i < e->sched.nr_tasks; ++i) {
+    struct task *t = &e->sched.tasks[i];
+
+    if (t->activated_by_unskip && !t->activated_by_marktask)
+      error("Task %s/%s activated by unskip and not by marktask!",
+            taskID_names[t->type], subtaskID_names[t->subtype]);
+    if (!t->activated_by_unskip && t->activated_by_marktask)
+      error("Task %s/%s activated by unskip and not by marktask!",
+            taskID_names[t->type], subtaskID_names[t->subtype]);
+
+    t->activated_by_marktask = 0;
+    t->activated_by_unskip = 0;
+  }
+#endif
 
   /* Print the status of the system */
   if (e->verbose) engine_print_task_counts(e);
