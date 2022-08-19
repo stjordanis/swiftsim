@@ -1,0 +1,183 @@
+%--------------------------------------------
+\section{Function Calls of an RT step}
+%--------------------------------------------
+
+
+
+\begin{landscape}
+{\footnotesize
+
+\begin{tabular}[l]{%
+	>{\raggedright\arraybackslash}p{2.6cm}%
+	>{\raggedright\arraybackslash}p{2.8cm}%
+	>{\raggedright\arraybackslash}p{7cm}%
+	>{\raggedright\arraybackslash}p{7cm}%
+}
+\textbf{task} & \textbf{task type} & \textbf{task purpose} & \textbf{function calls} \\[.5em]
+\hline
+\hline
+Injection Prep &
+	Interacting star and gas particles &
+	Gather gas particle neighbour data in preparation for the injection &
+	\texttt{runner\_iact\_rt\_inject\_prep} in \verb|src/rt/method/rt_iact.h| \\
+\hline
+Star Emission Rates &
+	Work on individual star particles &
+	Prepare everything necessary that needs to be done for radiation sources before the radiation sources and the gas interact. &
+	\texttt{rt\_compute\_stellar\_emission\_rate} in \verb|src/rt/method/rt.h| \\
+\hline
+\hline
+RT in &
+	Implicit&
+  Collect dependencies &
+	- \\
+\hline
+Injection &
+	Interacting star and gas particles &
+	Distribute the radiation from star particles onto gas particles &
+	\verb|runner_iact_rt_inject| in \verb|src/rt/method/rt_iact.h| \\
+\hline
+Ghost1 &
+	Work on individual gas particles &
+	Finish up any work that needs to be done for gas particles before the next gas $\leftrightarrow$ gas interaction begins &
+	\texttt{rt\_finalise\_injection} in \verb|src/rt/method/rt.h|\\
+\hline
+Gradient &
+	Interacting gas and gas particles &
+	Compute necessary gradients of the radiation quantities &
+	\verb|rt_gradients_collect| in \verb|src/rt/method/rt_gradients.h| and
+	\verb|rt_gradients_nonsym_collect| in \verb|src/rt/method/rt_gradients.h|\\
+\hline
+Ghost2 &
+	Work on individual gas particles &
+	Finish up any work that needs to be done for gas particles before the next gas $\leftrightarrow$ gas interaction begins &
+	\texttt{rt\_end\_gradient} in \verb|src/rt/method/rt.h|\\
+\hline
+Transport &
+	Interacting gas and gas particles &
+	Compute/exchange fluxes of homogenized equation of radiative transfer. &
+	\verb|runner_iact_rt_transport| in \verb|src/rt/method/rt_iact.h| and
+	\verb|runner_iact_nonsym_rt_transport| in \verb|src/rt/method/rt_iact.h|\\
+\hline
+Transport out &
+	Implicit&
+  Collect dependencies &
+	- \\
+\hline
+Thermochemistry &
+	Work on individual gas particles &
+	Finish up any work that needs to be done for gas particles before the thermochemistry part of the computation can begin. Then do the thermochemistry computation. &
+	\texttt{rt\_finalise\_transport} in \verb|src/rt/method/rt.h|,
+	\verb|rt_do_thermochemistry| in \verb|src/rt/method/rt_thermochemistry.h|\\
+\hline
+RT out &
+	Implicit&
+  Collect dependencies &
+	- \\
+\hline
+\end{tabular}
+
+
+}
+\end{landscape}
+\newpage
+
+
+\todo{check whether this is up to date}
+
+
+
+
+
+
+%-------------------------------------------------------------------------
+\section{Creating Collisional Ionization Equilibrium Initial Conditions}
+%-------------------------------------------------------------------------
+
+\todo{Document this}
+
+
+
+
+
+
+
+
+%---------------------------------------------
+\section{Additional Notes}
+%---------------------------------------------
+
+%---------------------------------------------
+\subsection{Zero Flux with Nonzero Energy}
+%---------------------------------------------
+
+We could encounter cases where we have nonzero radiation energy, but zero 
+radiation flux. (E.g. through diffusion or when exception handling unphysical 
+scenarios.) For these cases, recall that (index $i$ below is for photon group, 
+not particle index!)
+
+\begin{align}
+	\DELDT{\F_i} + c^2 \ \nabla \cdot \mathds{P}_i &=
+		- \sum\limits_{j}^{\mathrm{HI, HeI, HeII}} n_j \sigma_{i j} c \F_i \\
+	\mathds{P}_i &= 
+		\mathds{D}_i E_i \\
+	\mathds{D}_i &= 
+		\frac{1- \chi_i}{2} \mathds{I} + \frac{3 \chi_i - 1}{2} \mathbf{n}_i \otimes \mathbf{n}_i\\
+	\mathbf{n}_i &= 
+		\frac{\F_i}{|\F_i|} \\
+	\chi_i &= 
+		\frac{3 + 4 f_i ^2}{5 + 2 \sqrt{4 - 3 f_i^2}} \\
+	f_i &= 
+		\frac{|\F_i|}{c E_i}
+\end{align}
+
+For $\F_i = 0$, we get
+\begin{align}
+	f_i &= 0 \\
+	\chi_i &= \frac{3}{5 + 2 \sqrt{4}} = \frac{1}{3} \\
+	\mathds{D}_i &= \frac{1- \frac{1}{3}}{2} \mathds{I} = \frac{1}{3} \mathds{I} \\
+	\mathds{P}_i &= \mathds{D}_i E_i =  \frac{1}{3} E_i \mathds{I}
+\end{align}
+
+which is the solution of the optically thick limit, where the radiation pressure tensor is isotropic.
+
+
+
+%------------------------------------------------
+\subsection{RT Related Quantities And Their Units}
+%------------------------------------------------
+
+It could be helpful to have the commonly used quantities of RT written down
+somewhere along with their units. So here you go.
+
+
+\begin{align*}
+	I_\nu (\x, \mathbf{n}, t) &
+			&& \text{Specific intensity}
+			&& [I_\nu] = \frac{\text{erg}}{\text{cm}^2 \text{ rad Hz s}} \\
+	u_\nu (\x, \mathbf{n}, t) &= \frac{I_\nu}{c}
+			&& \text{radiation energy density }
+			&& [u_\nu] = \frac{\text{erg}}{\text{cm}^3 \text{ rad Hz}}\\
+	E_\nu (\x, t) &= \int_{4 \pi} \frac{I_\nu}{c} \de \Omega
+			&& \text{total energy density }
+			&& [E_\nu] = \frac{\text{erg}}{\text{cm}^3 \text{ Hz}}\\
+	E_{rad} (\x, t) &= \int_{0}^{\infty} E_\nu \de \nu
+			&& \text{total integrated energy density }
+			&& [E_\nu] = \frac{\text{erg}}{\text{cm}^3}\\
+	J_\nu (\x, t) &= \int_{4 \pi} I_\nu \frac{\de \Omega}{4 \pi}
+			= \frac{c}{4 \pi} E_\nu
+			&& \text{mean radiation specific intensity }
+			&& [J_\nu] = \frac{\text{erg}}{\text{cm}^2 \text{ Hz s}}\\
+	\F_\nu(\x, t) &= \int_{4 \pi}  I_\nu \mathbf{n} \de \Omega
+			&& \text{radiation flux }
+			&& [\F_\nu] = \frac{\text{erg}}{\text{cm}^2 \text{ s Hz}}\\
+	\mathbf{P}_\nu (\x, t) &= \frac{\F_\nu}{c^2}
+			&& \text{radiation momentum density }
+			&& [\mathbf{P}_\nu] = \frac{\text{erg}}{ \text{cm}^4 \text{ s}^{-1} \text{ Hz}}\\
+	\mathds{P}_\nu (\x, t) &= \int_{4 \pi} \frac{I_\nu}{c} \mathbf{n} \otimes \mathbf{n} \de \Omega
+			&& \text{radiation pressure tensor }
+			&& [\mathds{P}_\nu ] = \frac{\text{erg}}{\text{cm}^3 \text{ Hz}}
+\end{align*}
+
+
+
