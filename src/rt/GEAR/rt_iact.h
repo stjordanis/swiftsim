@@ -23,8 +23,8 @@
 #include "rt_flux.h"
 #include "rt_gradients.h"
 
-#define FLUXINTERHALF 1
-/* #define NOFLUX 1 */
+/* #define FLUXINTERHALF 1 */
+#define NOFLUX 1
 
 #define WEIGHT_PSI 1
 /* #define WEIGHT_R3 1 */
@@ -212,7 +212,8 @@ __attribute__((always_inline)) INLINE static void runner_iact_rt_inject(
      * linearly increase to F = cE afterwards.
      * Same as 1/3 + 2/3 * (2 * (max(r/H, 0.5) - 0.5)) */
 #ifdef FLUXINTERHALF
-    const float f = (1.f + 4.f * (max(0.5f, u) - 0.5f)) / 3.f;
+    /* const float f = (1.f + 4.f * (max(0.5f, u) - 0.5f)) / 3.f; */
+    const float f = 1.f; /* testing full flux */
     const float injected_flux =
         injected_energy_density * rt_params.reduced_speed_of_light * f;
 #endif
