@@ -113,6 +113,16 @@ __attribute__((always_inline)) INLINE static void rt_do_thermochemistry(
   /* reset boundary particle data. */
   rt_tchem_set_boundary_particles_for_test(p);
 
+  /* Set internal energy to satisfy Temperature requirement for test */
+  double mu = rt_tchem_get_mean_molecular_weight(
+      p->rt_data.tchem.mass_fraction_HI, p->rt_data.tchem.mass_fraction_HII,
+      p->rt_data.tchem.mass_fraction_HeI, p->rt_data.tchem.mass_fraction_HeII,
+      p->rt_data.tchem.mass_fraction_HeIII);
+
+  float u_fix = rt_tchem_internal_energy_from_T(
+      1.e4, mu, phys_const->const_boltzmann_k, phys_const->const_proton_mass);
+  hydro_set_internal_energy(p, u_fix);
+
   /* This is where the fun begins */
   /* ---------------------------- */
 
