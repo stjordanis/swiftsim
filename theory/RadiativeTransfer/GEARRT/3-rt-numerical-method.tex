@@ -3,9 +3,9 @@
 %======================================================
 
 
-The core idea of the numerical solution for the radiative transfer equations 
-follows \cite{ramses-rt13} and \cite{ramses-rt15}, but it's adapted to work 
-with meshless methods and independent task-based parallelism instead of cells 
+The core idea of the numerical solution for the radiative transfer equations
+follows \cite{ramses-rt13} and \cite{ramses-rt15}, but it's adapted to work
+with meshless methods and independent task-based parallelism instead of cells
 using adaptive mesh refinement.
 
 
@@ -20,9 +20,9 @@ using adaptive mesh refinement.
 
 
 
-The equations \ref{eq:dEdt-freq} - \ref{eq:dFdt-freq} are still frequency specific, 
+The equations \ref{eq:dEdt-freq} - \ref{eq:dFdt-freq} are still frequency specific,
 and in order to obtain the full radiation, they need to be discretized.
-For a rough approximation of multifrequency, the relevant frequency range is 
+For a rough approximation of multifrequency, the relevant frequency range is
 split into a number $M$ of mutually exclusive photon groups of frequency ranges:
 
 \begin{align}
@@ -50,31 +50,31 @@ where
 	\sigma_{ij}
         &= \frac{
                 \int\limits_{\nu_{i0}}^{\nu_{i1}} \sigma_{\nu j} E_\nu / (h \nu) \de \nu
-            } { 
+            } {
                 \int\limits_{\nu_{i0}}^{\nu_{i1}} E_\nu / (h \nu) \de \nu
             }
 		\approx \frac{
             \int\limits_{\nu_{i0}}^{\nu_{i1}} \sigma_{\nu j} J_\nu / (h \nu) \de \nu
-            }{ 
+            }{
                 \int\limits_{\nu_{i0}}^{\nu_{i1}} J_\nu / (h \nu) \de \nu
             }
 \end{align}
 
-The approximation on the right hand side is a simplification obtained by assuming 
+The approximation on the right hand side is a simplification obtained by assuming
 a frequency distribution of energy $J_{\nu}$ for the radiative sources, e.g. a blackbody.
 
 Finally, the radiation pressure tensor is discretized in the same manner:
 
 \begin{align}
-	\mathds{P}_i &= 
+	\mathds{P}_i &=
         \mathds{D}_i E_i \label{eq:pressure-tensor-group-start}\\
-	\mathds{D}_i &= 
+	\mathds{D}_i &=
         \frac{1- \chi_i}{2} \mathds{I} + \frac{3 \chi_i - 1}{2} \mathbf{n}_i \otimes \mathbf{n}_i \label{eq:eddington-group} \\
-	\mathbf{n}_i &= 
+	\mathbf{n}_i &=
         \frac{\F_i}{|\F_i|} \\
-	\chi_i &= 
+	\chi_i &=
         \frac{3 + 4 f_i ^2}{5 + 2 \sqrt{4 - 3 f_i^2}} \\
-	f_i &= 
+	f_i &=
         \frac{|\F_i|}{c E_i} \label{eq:pressure-tensor-group-end}
 \end{align}
 
@@ -122,7 +122,7 @@ In order to do so, the equations are decomposed into three steps that are execut
 %--------------------------------------------------------------------
 
 
-In the injection step, the radiation is gathered from radiating sources 
+In the injection step, the radiation is gathered from radiating sources
 (stars/stellar populations) and injected into the gas.
 The equation to be solved in this step is
 
@@ -135,10 +135,10 @@ This is solved using a simple finite difference discretization and first order
 forward Euler integration:
 
 \begin{equation}
-    E_i(t + \Delta t) = E_i(t) + \Delta t \dot{E}_i^* 
+    E_i(t + \Delta t) = E_i(t) + \Delta t \dot{E}_i^*
 \end{equation}
 
-for each particle. The way the energy density $\dot{E}_i^*$ is deposited from 
+for each particle. The way the energy density $\dot{E}_i^*$ is deposited from
 stars onto particles corresponds to the way that feedback is done in SWIFT:
 active star particles ``push'' radiation onto both active and inactive particles.
 
@@ -227,9 +227,9 @@ After some simple algebra, we arrive at
 \mu_a = \frac{\sum_b w_j}{4 w_a} \label{eq:isotropy-correction-general}
 \end{equation}
 
-The extension to 3D is trivial, the factor 1/4 is just turned into 1/8. The 
-correction term~\ref{eq:isotropy-correction-general} needs a small modification 
-for cases where there is a quadrant which contains zero particles and hence 
+The extension to 3D is trivial, the factor 1/4 is just turned into 1/8. The
+correction term~\ref{eq:isotropy-correction-general} needs a small modification
+for cases where there is a quadrant which contains zero particles and hence
 zero weight: Let $q_{nz}$ be the number of quadrants with non-zero weight, i.e.
 with non-zero particles in them. Then
 
@@ -243,9 +243,9 @@ with non-zero particles in them. Then
 	\includegraphics[width=.6\textwidth]{figures/flux_correction_method_plot.pdf}%
 	\label{fig:flux-injection-correction-method}
 	\caption{
-		Scheme of a star surrounded by gas particles, where the space centered at the 
-        star is divided into four quadrants in the 2D case in an attempt to make the 
-        injected flux more isotropic by accounting for the total weights $w_1$, $w_2$, 
+		Scheme of a star surrounded by gas particles, where the space centered at the
+        star is divided into four quadrants in the 2D case in an attempt to make the
+        injected flux more isotropic by accounting for the total weights $w_1$, $w_2$,
         $w_3$, $w_4$ of each quadrant.
 	}
 \end{figure}
@@ -290,7 +290,7 @@ They are both in the form \ref{eq:conservation-law}, so we use the standard mesh
 	\deldt(\mathcal{U}_k V_k) + \sum\limits_{l} \mathcal F_{kl} A_{kl} = 0 \label{eq:meshless}
 \end{align}
 
-where $k$, $l$ are particle indices, $V_k$ the associated particle volume, 
+where $k$, $l$ are particle indices, $V_k$ the associated particle volume,
 $\mathbf{A}_{kl}$ the effective surfaces \ref{eq:HopkinsAij} or \ref{eq:IvanovaAij}, and we have
 
 \begin{align}
@@ -320,25 +320,25 @@ We approximate the problem by defining an ``interface'' at the position
 and extrapolate the value of the conserved variables at the position:
 
 \begin{equation}
-	\mathcal{U}_{k, l}(\mathbf{x} = 
+	\mathcal{U}_{k, l}(\mathbf{x} =
         \mathbf{x}_{kl}) \approx \mathcal{U}_{k, l} + \DELDX{ \mathcal{U}_{k, l}}\ (\mathbf{x}_{kl} - \mathbf{x}_{k,l})
 \end{equation}
 
 from which we get the fluxes (in the conservation law sense)
 
 \begin{equation}
-	\mathcal{F}_{k, l}(\mathbf{x} = 
+	\mathcal{F}_{k, l}(\mathbf{x} =
         \mathbf{x}_{kl}) = \mathcal{F}\left( \mathcal{U}_{k, l}(\mathbf{x} = \mathbf{x}_{kl}) \right)
 \end{equation}
 
 
-The gradients are obtained using equation \ref{eq:gradient}, for which a neighbour 
+The gradients are obtained using equation \ref{eq:gradient}, for which a neighbour
 loop is necessary.
 
 
-Since the meshless method we use is second order accurate, we need to employ a 
+Since the meshless method we use is second order accurate, we need to employ a
 flux limiter to prevent oscillations and instabilities from occurring.
-(Note however that because we're using the operator splitting approach, the 
+(Note however that because we're using the operator splitting approach, the
 final RT method will only be first order accurate in time!) For details about
 the limiters, please refer to section \ref{chap:limiters}.
 
@@ -443,11 +443,11 @@ solution for the intercell flux:
 
 \todo{check whether intro needs reworking}
 
-The sophisticated limiters that we use for hydro don't prevent instabilities for 
+The sophisticated limiters that we use for hydro don't prevent instabilities for
 RT, so we need to go back to less sophisticated ones.
 
 \todo{check this statement:
-    \textit{The sophisticated limiters that we use for hydro don't prevent instabilities for 
+    \textit{The sophisticated limiters that we use for hydro don't prevent instabilities for
     RT, so we need to go back to less sophisticated ones.
     }
 }
@@ -595,7 +595,30 @@ See section \ref{chap:riemann} for details on the Riemann solvers.
 %---------------------------------------------
 
 
-\todo{How we're doing this}
+Contrary to SPH hydrodynamics which keep the particle masses constant, the
+Gizmo-MFV scheme has mass fluxes between the particles. If there is a mass flux $\frac{\Delta m_{ij}}{\Delta t}$ between two interacting particles, then we need to pay attention to the individual species' mass fractions being exchanged.
+The mass of each individual species being exchanged needs to be traced individually, and depending on the direction: If a particle loses mass, then it loses mass and species mass fractions according to its own mass fractions. If it gains mass during an exchange, then it gains species mass fractions according to the interaction partner's mass fractions.
+
+The usual convention for a mass flux between particles ``$i$'' and ``$j$'' is to treat $i$ as the ``left'' particle and $j$ as the ``right'' particle in an analogy to cells. During each \textbf{hydrodynamics} flux exchange, for each species $k$ the total mass flux $\frac{\Delta x_{i,k}}{\Delta t}$ is being accumulated:
+
+\begin{align}
+\frac{\Delta x_{i,k}}{\Delta t} &= \sum_j \frac{\Delta m_{ij}}{\Delta t} x_{ij,k}\\
+\text{where }\quad x_{ij,k} &=
+	\begin{cases}
+		x_{i,k} \quad \text{ if } \quad \frac{\Delta m_{ij}}{\Delta t} > 0 \\
+		x_{j,k} \quad \text{ if } \quad \frac{\Delta m_{ij}}{\Delta t} < 0
+	\end{cases}
+\end{align}
+
+
+The actual mass fractions get updated during a kick by integrating the flux in time and re-computing the mass fractions using the updated fraction masses. For each species $k$ of a particle $i$:
+
+\begin{align}
+m_{i,k}^{t} &= m_i  x_{i,k}^{t} \\
+m_{i,k}^{t + \Delta t} &= m_{i,k}^{t}  + \Delta t \ \frac{\Delta x_{i,k}}{\Delta t} \\
+x_{i,k}^{t + \Delta t} &= \frac{m_{i,k}^{t + \Delta t}}{\sum_k m_{i,k}^{t + \Delta t}}
+\end{align}
+
 
 
 
@@ -607,6 +630,25 @@ See section \ref{chap:riemann} for details on the Riemann solvers.
 %---------------------------------------------
 
 
-\todo{How we're doing this}
+Contrary to the hydrodynamics, the radiation is treated as Eulerian, i.e. in a static frame of reference, not comoving with the fluid. With respect to the radiation, it is better to think of particles as interpolation points in a box rather than comoving fluid elements. As a consequence, we need to make corrections when a particle is drifted for hydrodynamics purposes. We do that by simply extrapolating the particle value at the new point given its current state and the gradients we obtained in the previous interaction loop.
+
+For a particle $i$, each radiation quantity $\mathcal{U}_k$ (energy densities and fluxes for each photon group), and each dimension $\nu$, we first obtain the drift distance
+
+\begin{align}
+\Delta x_{i,\nu,\text{drift}} &= v_{i,\nu} \Delta t_{i,\text{drift}}
+\end{align}
+
+and obtain the updated value
+
+\begin{align}
+\mathcal{U}_{i,k} (\x + \Delta \x_{\text{drift}}) \approx \mathcal{U}_{i,k} (\x) + \sum_\nu \frac{\del \mathcal{U}_{i,k}(\x)}{\del x_\nu} \Delta x_{i,\nu,\text{drift}}
+\end{align}
+
+
+
+
+
+
+
 
 

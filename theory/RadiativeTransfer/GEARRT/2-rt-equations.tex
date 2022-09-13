@@ -13,20 +13,20 @@ GEARRT follows the \citet{RAMSES} scheme.
 The equation of radiative transfer is given by
 
 \begin{align}
-    \frac{1}{c} \DELDT{I_\nu} + \mathbf{n} \cdot \nabla I_\nu 
+    \frac{1}{c} \DELDT{I_\nu} + \mathbf{n} \cdot \nabla I_\nu
         &= \eta_\nu - \kappa_\nu I_\nu \label{eq:RT} \\
         &= \eta_\nu - \sum_j^{\absorbers} \sigma_{j,\nu} n_j I_\nu \label{eq:RT-sigma}
 \end{align}
 
-$I_\nu$ is called the specific intensity, $\eta_\nu$ is a source function of 
-radiation, while $\kappa_\nu$ is an absorption coefficient. 
-In eq. \ref{eq:RT-sigma} we split the absorption coefficient $\kappa_\nu$ into the sum over 
-all photoabsorbing species $j$ (e.g. hydrogen, helium, and singly ionized helium) 
-with their respective interaction cross sections $\sigma_{j,\nu}$ and number 
+$I_\nu$ is called the specific intensity, $\eta_\nu$ is a source function of
+radiation, while $\kappa_\nu$ is an absorption coefficient.
+In eq. \ref{eq:RT-sigma} we split the absorption coefficient $\kappa_\nu$ into the sum over
+all photoabsorbing species $j$ (e.g. hydrogen, helium, and singly ionized helium)
+with their respective interaction cross sections $\sigma_{j,\nu}$ and number
 density $n_j$.
 
 In what follows, we explicitly label the source terms as $\eta_\nu = \dot{E}^*_\nu +
-\dot{E}^{rec}_\nu$, where $\dot{E}^*_\nu$ is radiation emitted by stars, and 
+\dot{E}^{rec}_\nu$, where $\dot{E}^*_\nu$ is radiation emitted by stars, and
 $\dot{E}^{rec}_\nu$ is radiation stemming from recombination processes.
 
 Because we don't want to solve the equation for all conceivable directions
@@ -44,8 +44,8 @@ obtain
 
 Note that $E_\nu$, $\dot{E}^*_\nu$, and $\dot{E}^{rec}_\nu$ are radiation energy
 \emph{densities} in the frequency interval between frequency $\nu$ and $\nu +
-\de \nu$ and have units of $\text{erg / cm}^3 \text{ / Hz}$. 
-$\F$ is the radiation flux, and has units of $\text{erg / cm}^2 \text{ / Hz / s}$. 
+\de \nu$ and have units of $\text{erg / cm}^3 \text{ / Hz}$.
+$\F$ is the radiation flux, and has units of $\text{erg / cm}^2 \text{ / Hz / s}$.
 \footnote{
     It might be helpful to remember that in the optically thin (free streaming)
     limit, the relation between radiation flux and energy density is $|\F| = c
@@ -54,8 +54,8 @@ $\F$ is the radiation flux, and has units of $\text{erg / cm}^2 \text{ / Hz / s}
 }
 
 
-To close this set of equations, an expression (model) for the pressure tensor 
-$\mathds{P}_\nu$ is necessary.  We use the so-called ``M1 closure'' where we 
+To close this set of equations, an expression (model) for the pressure tensor
+$\mathds{P}_\nu$ is necessary.  We use the so-called ``M1 closure'' where we
 describe the pressure tensor via the Eddington tensor $\mathds{D}_\nu$:
 
 \todo{Citation for M1 closure}
@@ -64,18 +64,18 @@ describe the pressure tensor via the Eddington tensor $\mathds{D}_\nu$:
 	\mathds{P}_\nu = \mathds{D} E_\nu
 \end{equation}
 
-The Eddington tensor is a dimensionless quantity that encapsulates the local 
+The Eddington tensor is a dimensionless quantity that encapsulates the local
 radiation field geometry and its effect in the radiation flux conservation equation.
 The M1 closure sets the Eddington tensor to have the form
 
 \begin{align}
-	\mathds{D}_\nu &= 
+	\mathds{D}_\nu &=
         \frac{1- \chi_\nu}{2} \mathds{I} + \frac{3 \chi_\nu - 1}{2} \mathbf{n}_\nu \otimes \mathbf{n}_\nu \label{eq:eddington-freq} \\
-	\mathbf{n}_\nu &= 
+	\mathbf{n}_\nu &=
         \frac{\F_\nu}{|\F_\nu|} \\
-	\chi_\nu &= 
+	\chi_\nu &=
         \frac{3 + 4 f_\nu ^2}{5 + 2 \sqrt{4 - 3 f_\nu^2}} \\
-	f_\nu &= 
+	f_\nu &=
         \frac{|\F_\nu|}{c E_\nu}
 \end{align}
 
@@ -94,7 +94,7 @@ The M1 closure sets the Eddington tensor to have the form
 Currently, we don't take into account the effects of radiation pressure on the
 gas. We only consider heating and ionization.
 
-Let 
+Let
 \begin{equation}
     N_\nu = E_\nu / (h \nu)
 \end{equation}
@@ -109,9 +109,9 @@ where $\nu_{ion,j}$ is the ionization energy of the species $j$. In the case of
 hydrogen and helium, their values are
 
 \begin{align}
-    \nu_{ion,HI} &= 2.179 \times 10^{-11} \text{ erg} = 13.60 \text{ eV}\\
-    \nu_{ion,HeI} &= 3.940 \times 10^{-11} \text{ erg} = 24.59 \text{ eV}\\
-    \nu_{ion,HeII} &= 8.719 \times 10^{-11} \text{ erg} = 54.42 \text{ eV}
+    \nu_{\text{ion,HI}} &= 2.179 \times 10^{-11} \text{ erg} = 13.60 \text{ eV}\\
+    \nu_{\text{ion,HeI}} &= 3.940 \times 10^{-11} \text{ erg} = 24.59 \text{ eV}\\
+    \nu_{\text{ion,HeII}} &= 8.719 \times 10^{-11} \text{ erg} = 54.42 \text{ eV}
 \end{align}
 
 and the photoionization rate of the gas is given by
