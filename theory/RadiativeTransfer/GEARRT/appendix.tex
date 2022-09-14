@@ -103,6 +103,64 @@ RT out &
 
 
 
+
+%-------------------------------------------------------------------------------
+\section{Converting Photon Number Emission Rates to Photon Energy Emission Rates}
+%-------------------------------------------------------------------------------
+
+Many other, in particular older, codes and papers use photon \emph{number} injection rates $\dot{N}_{\gamma}$ for their emission rates rather than the \emph{energy} injection rates $\dot{E}_\gamma$ or equivalently luminosities $L$.
+
+To convert between these two quantities, we need to assume that the emission follows some spectrum $J(\nu)$.
+
+In the case of a single photon group, the conversion is quite simple: We first need to compute the average photon energy $\overline{E}_\gamma$:
+
+\begin{align}
+	\overline{E}_\gamma = \frac{\int J(\nu) \ \de \nu }{\int J(\nu) / (h \nu) \ \de \nu}
+\end{align}
+
+then the emitted luminosity (energy per unit time) is
+
+\begin{align}
+	L = \overline{E}_\gamma \ \dot{N}_{\gamma}
+\end{align}
+
+Note that in many cases, the given emission photon number rate is the number rate of \emph{ionizing} photons. For us, this means that we need to start the integrals at the lowest ionizing frequency $\nu_{\text{ion, min}}$ in order to have the correct translation to the luminosity of the \emph{ionizing} energy:
+
+
+\begin{align}
+	\overline{E}_\gamma = \frac{\int\limits_{\nu_{\text{ion, min}}}^\infty J(\nu) \ \de \nu }{\int\limits_{\nu_{\text{ion, min}}}^\infty J(\nu) / (h \nu) \ \de \nu}
+\end{align}
+
+
+In the case of several photon groups being used, the conversion requires a little adaptation in order to preserve the correct number of photons emitted. For each photon group $i$, the average photon energy is given by
+
+\begin{align}
+	\overline{E}_i = \frac{\int\limits_{\nu_{i \text{, min}}}^{\nu_{i \text{, max}}} J(\nu) \ \de \nu }{\int\limits_{\nu_{i \text{, min}}}^{\nu_{i \text{, max}}} J(\nu) / (h \nu) \ \de \nu}
+\end{align}
+
+
+Secondly, we need to compute the fraction $f_i$ of ionizing photons in each bin, which is given by
+
+\begin{align}
+	f_i = \frac{\int\limits_{\nu_{i \text{, min}}}^{\nu_{i \text{, max}}} J(\nu) / (h \nu)  \ \de \nu }{\int\limits_{\nu_{min}}^{\infty} J(\nu) / (h \nu) \ \de \nu}
+\end{align}
+
+Then the number of emitted photons in each bin is given by
+
+\begin{align}
+\dot{N}_i = f_i\ \dot{N}_\gamma
+\end{align}
+
+And the luminosities are given by
+
+\begin{align}
+	L_i &= \overline{E}_i \ N_i \\
+			&= \frac{\int\limits_{\nu_{i \text{, min}}}^{\nu_{i \text{, max}}} J(\nu) \ \de \nu }{\int\limits_{\nu_{min}}^{\infty} J(\nu) / (h \nu) \ \de \nu} \ \dot{N}_\gamma
+\end{align}
+
+
+
+
 %---------------------------------------------
 \section{Additional Notes}
 %---------------------------------------------
@@ -111,23 +169,23 @@ RT out &
 \subsection{Zero Flux with Nonzero Energy}
 %---------------------------------------------
 
-We could encounter cases where we have nonzero radiation energy, but zero 
-radiation flux. (E.g. through diffusion or when exception handling unphysical 
-scenarios.) For these cases, recall that (index $i$ below is for photon group, 
+We could encounter cases where we have nonzero radiation energy, but zero
+radiation flux. (E.g. through diffusion or when exception handling unphysical
+scenarios.) For these cases, recall that (index $i$ below is for photon group,
 not particle index!)
 
 \begin{align}
 	\DELDT{\F_i} + c^2 \ \nabla \cdot \mathds{P}_i &=
 		- \sum\limits_{j}^{\mathrm{HI, HeI, HeII}} n_j \sigma_{i j} c \F_i \\
-	\mathds{P}_i &= 
+	\mathds{P}_i &=
 		\mathds{D}_i E_i \\
-	\mathds{D}_i &= 
+	\mathds{D}_i &=
 		\frac{1- \chi_i}{2} \mathds{I} + \frac{3 \chi_i - 1}{2} \mathbf{n}_i \otimes \mathbf{n}_i\\
-	\mathbf{n}_i &= 
+	\mathbf{n}_i &=
 		\frac{\F_i}{|\F_i|} \\
-	\chi_i &= 
+	\chi_i &=
 		\frac{3 + 4 f_i ^2}{5 + 2 \sqrt{4 - 3 f_i^2}} \\
-	f_i &= 
+	f_i &=
 		\frac{|\F_i|}{c E_i}
 \end{align}
 
