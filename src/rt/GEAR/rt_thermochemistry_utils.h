@@ -290,18 +290,18 @@ rt_tchem_set_boundary_particles_for_test(struct part* restrict p) {
   const double flux_units = 6.802181e-14;
 
   /* In case of 1 group */
-  /* float fluxes[1] = {4.744e-05 * flux_units}; */
+  /* float fluxes[1] = {4.744e-05 / flux_units}; */
   /* float energy_densities[1] = {fluxes[0] * cred_inv}; */
 
   /* In case of 3 groups */
-  float fluxes[3] = { 1.350e-05 * flux_units, 2.779e-05 * flux_units, 6.152e-06 * flux_units };
+  float fluxes[3] = { 1.350e-05 / flux_units, 2.779e-05 / flux_units, 6.152e-06 / flux_units };
   float energy_densities[3] = { fluxes[0] * cred_inv, fluxes[1] * cred_inv, fluxes[2] * cred_inv };
 
   if (p->id >= 2000000000) {
     for (int g = 0; g < RT_NGROUPS; g++) {
       p->rt_data.radiation[g].energy_density = energy_densities[g];
-      p->rt_data.radiation[g].flux[0] = 0.f;
-      p->rt_data.radiation[g].flux[1] = fluxes[g];
+      p->rt_data.radiation[g].flux[0] = fluxes[g];
+      p->rt_data.radiation[g].flux[1] = 0.f;
       p->rt_data.radiation[g].flux[2] = 0.f;
     }
   }
