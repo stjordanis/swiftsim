@@ -200,7 +200,7 @@ void rt_get_Ifront_radius(struct engine *e) {
   /* Get current time, valid for both main steps and subcycles */
   double time = e->ti_current_subcycle * e->time_base + e->time_begin;
 
-  const int nbins = 10;
+  const int nbins = 64;
   int *count = malloc(nbins * sizeof(int));
   double *hist = malloc(nbins * sizeof(double));
   double *profile = malloc(nbins * sizeof(double));
