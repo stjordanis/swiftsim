@@ -83,8 +83,6 @@ RT out &
 \newpage
 
 
-\todo{check whether this is up to date}
-
 
 
 
@@ -94,7 +92,196 @@ RT out &
 \section{Creating Collisional Ionization Equilibrium Initial Conditions}
 %-------------------------------------------------------------------------
 
-\todo{Document this}
+
+On startup, GEARRT offers the possibility to generate the ionization mass fractions of the gas 
+particles assuming the gas is in collisional ionization equilibrium, composed of Hydrogen and 
+Helium, and that there is no radiation present. In order to determine the ionization mass fractions 
+of all species (H$^0$, H$^+$, He$^0$, He$^+$, He$^{++}$) for a given specific internal energy $u$, 
+an iterative procedure needs to be applied because the gas variables are interconnected:
+
+
+
+Commonly the average particle mass $\overline{m}$ of a gas is expressed using the (unitless) mean 
+molecular weight $\mu$ : 
+
+\begin{align}
+  \overline{m} = \mu m_u
+\end{align}
+
+where $m_u$ is the atomic mass unit.
+
+The ionization state of the gas influences the mean molecular weight $\mu$. Consider a medium with 
+$j$ different elements of atomic mass $A_j$ with a mass fraction $X_j$ and a number of free 
+electrons $E_j$. Then the number density of the gas is given by
+
+\begin{align}
+    n = \frac{\rho}{\mu m_u} = 
+        \sum_j \underbrace{\rho X_j}_{\text{density fraction of species } j} \times
+        \underbrace{\frac{1}{A_j m_u}}_{\text{mass per particle of species}} \times
+        \underbrace{(1 + E_j)}_{\text{number of particles per species}} 
+\label{eq:number-density-MMW}
+\end{align}
+
+
+whre we neglect the mass contribution of electrons. In the case for Hydrogen and Helium, the values 
+of $A_j$ and $E_j$ are shown in Table \ref{tab:mass-and-electron-numbers}. Eq. 
+\ref{eq:number-density-MMW} simplifies to
+
+\begin{align}
+    \frac{1}{\mu} = \sum_j \frac{X_j}{A_j} (1 + E_j)
+\end{align}
+
+Specifically, ionization changes the mass fractions $X_j$ of the species, and therefore also the 
+mean molecular weight $\mu$.
+
+In turn, the mean molecular weight determines the gas temperature at a given specific internal 
+energy. Using the ideal gas law
+
+\begin{align}
+    p = n k T = \frac{\rho}{\mu m_u} k T
+\end{align}
+
+and the expression for the specific internal energy
+
+\begin{align}
+    u = \frac{1}{\gamma - 1} \frac{p}{\rho}
+\end{align}
+
+the gas temperature $T$ = $T(u, \mu)$ is given by
+
+\begin{align}
+    T = u (\gamma - 1) \mu \frac{m_u}{k}
+\end{align}`
+
+Lastly, the gas temperature determines the collisional ionization and recombination rates, which 
+need to be balanced out by the correct number density of the individual species in order to be in 
+ionization equilibrium, i.e. at a state where the ionization and recombination rates exactly cancel 
+each other out.
+
+We take the ionization and recombination rates from \citet{katzCosmologicalSimulationsTreeSPH1996}, 
+which are given in Table \ref{tab:coll-ion-rates-katz}. For a gas with density $\rho$, Hydrogen
+mass fraction $X_H$ and Helium mass fraction $X_{He} = 1 - X_H$, the total number densities of all 
+hydrogen and helium species are
+
+\begin{align}
+  n_H &= X_H \frac{\rho}{m_u} \\
+  n_{He} &= X_{He}  \frac{\rho}{4 m_u} 
+\end{align}
+
+an in equilibrium, the number densities of the individual species are given by
+
+\begin{align}
+    n_{H^0} &= 
+        n_H \frac{A_{H^+}}{A_{H^+} + \Gamma_{H^0}} \\
+    n_{H^+} &= 
+        n_H - n_{H^0} \\
+    n_{He^+} &= 
+        n_{He} \frac{1}{1 + (A_{He^+} + A_d) / \Gamma_{He^0} + \Gamma_{He^+} / A_{He^{++}}} \\
+    n_{He^0} &= 
+        n_{He^+} \frac{A_{He^+} + A_d}{\Gamma_{He^0}} \\
+    n_{He^{++}} &= 
+        n_{He^+} \frac{\Gamma_{He^+}}{A_{He^+}}
+\end{align}
+
+
+To summarize, the tricky bit here is that the number densities determine the mean molecular weight, 
+the mean molecular weight determines the temperature of the gas for a given density and specific 
+internal energy, while the temperature determines the number densities of the species.
+
+To find the correct mass fractions, the iterative Newton-Raphson root finding method is used. 
+Specifically, using some initial guesses for temperature and mean molecular weights, $T_{guess}$ 
+and $\mu_{guess}$, in each iteration step we determine the resulting specific internal energy 
+$u_{guess} = k T_{guess} / (\gamma - 1) / (\mu_{guess} m_u)$. The function whose root we're looking 
+for is
+
+\begin{align}
+  f(T) = u - u_{guess}(T)
+\end{align}
+
+with the derivative
+
+\begin{align}
+  \frac{\del f}{\del T} =  - \frac{\del u}{\del T} (T = T_{guess}) = \frac{k}{(\gamma - 
+1) / (\mu_{guess} m_u )}
+\end{align}
+
+where $u$ is the specific internal energy of the gas, which is fixed and provided by the initial 
+conditions. We now look for the $T$ at which $f(T) = 0$. The Newton-Raphson method prescribes to 
+find the $n+1$th $T_{guess}$ using
+
+\begin{align}
+    T_{n+1} = T_n + \frac{f(T_n)}{\frac{\del f}{\del T}(T_n)}
+\end{align}
+
+During each iteration, the new mass fractions and the resulting mean molecular weight given the 
+latest guess for the temperature are computed. At the start, the first guess for the temperature 
+$T_{guess}$ is computed assuming a fully neutral gas. Should that gas temperature be above $10^5$ K, 
+the first guess is changed to a fully ionized gas. The iteration is concluded once $f(T) \leq 
+\epsilon = 10^{-4}$.
+
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{lll}
+\hline
+$A_{H^+}         = $ & 
+    $8.4 \times 10^{-11} T^{-1/2} T_3^{-0.2} (1 + T_6^{0.7})^{-1}$ & 
+    RR for H$^{+}$ \\
+$A_{d}           = $ &
+    $1.5 \times 10^{-10} T^{-0.6353}$    & 
+    dielectronic RR for He$^{+}$ \\
+$A_{He^+}        = $ & 
+    $1.9 \times 10^{-3} T^{-1.5} \mathrm{e}^{-470000/T} (1 + 0.3 \mathrm{e}^{-94000/T})$    & 
+    RR for He$^{+}$ \\
+$A_{He^{++}}     = $ & 
+    $3.36 \times 10^{-10} T^{-1/2} T_3^{-0.2} (1 + T_6^{0.7})^{-1}$    & 
+    RR for He$^{++}$ \\
+\hline
+$\Gamma_{H^{0}}  = $ & 
+    $5.85 \times 10^{-11} T^{1/2} \mathrm{e}^{-157809.1/T} ( 1 + T_5^{1/2})^{-1}$& 
+    CIR for H$^{0}$ \\
+$\Gamma_{He^{0}} = $ & 
+    $2.38 \times 10^{-11} T^{1/2} \mathrm{e}^{-285335.4.1/T} ( 1 + T_5^{1/2})^{-1}$& 
+    CIR for He$^{0}$ \\
+$\Gamma_{He^{+}} = $ & 
+    $5.68 \times 10^{-12} T^{1/2} \mathrm{e}^{-631515/T} ( 1 + T_5^{1/2})^{-1}$& 
+    CIR for He$^{+}$ \\
+\hline
+\end{tabular}
+\end{center}
+\caption{Temperature ($T$) dependent recombination rates (RR) and collisional ionization rates 
+(CIR) for Hydrogen and Helium species, adapted from \citet{katzCosmologicalSimulationsTreeSPH1996}. 
+All rates are in units of cm$^3$ s$^{-1}$. $T_n$ is shorthand for $T / 10^n$K.}
+\label{tab:coll-ion-rates-katz}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l|ll}
+species  & $A$ & $E$ \\
+\hline
+H$^0$    & 1 & 0 \\
+H$^+$    & 1 & 1 \\
+He$^0$   & 4 & 0 \\
+He$^+$   & 4 & 1 \\
+He$^{++}$  & 4 & 2 \\
+\end{tabular}
+\end{center}
+\caption{Atomic mass numbers $A$ and free electron numbers $E$ for ionization species of Hydrogen 
+and Helium.}
+\label{tab:mass-and-electron-numbers}
+\end{table}
+
 
 
 
@@ -165,9 +352,9 @@ And the luminosities are given by
 \section{Additional Notes}
 %---------------------------------------------
 
-%---------------------------------------------
-\subsection{Zero Flux with Nonzero Energy}
-%---------------------------------------------
+%---------------------------------------------------------------------------------
+\subsection{Zero Flux with Nonzero Energy} \label{chap:zero-flux-nonzer-energy}
+%---------------------------------------------------------------------------------
 
 We could encounter cases where we have nonzero radiation energy, but zero
 radiation flux. (E.g. through diffusion or when exception handling unphysical
@@ -197,7 +384,109 @@ For $\F_i = 0$, we get
 	\mathds{P}_i &= \mathds{D}_i E_i =  \frac{1}{3} E_i \mathds{I}
 \end{align}
 
-which is the solution of the optically thick limit, where the radiation pressure tensor is isotropic.
+which is the solution of the optically thick limit, where the radiation pressure tensor is 
+isotropic.
+
+
+Now let's look at what happens when a particle $k$ has some nonzero energy $E_0$, but zero flux, 
+and interacts with particle $l$, which has both zero energy density and zero flux. The initial 
+state is then:
+
+\begin{align}
+    \mathcal{U}_k(t = 0) &= \left( \begin{matrix}
+                    E_0 \\
+                    \mathbf{0}
+                  \end{matrix} \right)
+    \quad & \quad \quad
+    \mathcal{F}_k(t = 0)  &= \left( \begin{matrix}
+                   \mathbf{0} \\
+                   c^2 \mathds{P}
+                  \end{matrix} \right)
+                = \left( \begin{matrix}
+                   \mathbf{0} \\
+                   \frac{c^2}{3} E_0 \mathds{I}
+                  \end{matrix} \right)\\
+%
+    \mathcal{U}_l(t = 0) &= \left( \begin{matrix}
+                    0 \\
+                    \mathbf{0}
+                  \end{matrix} \right)
+    \quad & \quad \quad
+    \mathcal{F}_l(t = 0)  &= \left( \begin{matrix}
+                   \mathbf{0} \\
+                   0
+                  \end{matrix} \right)
+\end{align}
+
+To simplify matters, let's assume both particles have equal volumes, $V_k = V_l = V$, and let's 
+omit the gradient extrapolation to the interface position that makes the method second order 
+accurate. Let's also assume that the particles are aligned parallel to a coordinate axis,  thus 
+making the projection along the normal vector to their interaction surface trivial.
+
+Then the intercell flux given by the GLF Riemann solver (eq. \ref{eq:riemann-GLF}) is
+
+\begin{align}
+	\mathcal{F}_{1/2}(\mathcal{U}_L, \mathcal{U}_R) &=
+		\frac{\mathcal{F}_{L} + \mathcal{F}_{R}}{2} -
+		\frac{c}{2} \left(\mathcal{U}_R - \mathcal{U}_L \right) \\
+	&=	\left(\begin{matrix}
+        \frac{0 - 0}{2} - \frac{c}{2} (0 - E_0)\\
+        \frac{c^2 / 3 \ E_0 - 0}{2} - \frac{c}{2} (0 -0)
+	  	\end{matrix} \right)
+	=	\left(\begin{matrix}
+        \frac{c}{2} E_0 \\
+        \frac{c^2}{6} E_0
+	  	\end{matrix} \right)
+\end{align}
+
+Let $\beta \equiv \frac{\Delta t A_{kl} c}{2 V}$. Using the update formula given in eq. 
+\ref{eq:transport-update-explicit}, the states at $t = \Delta t$ will be
+
+\begin{align}
+	\mathcal{U}_k(t = \Delta t) &= \mathcal{U}_k (t = 0) - \frac{\Delta t}{V} \mathcal{F}_{1/2}
+A_{kl} \\
+	&=	\left(\begin{matrix}
+        E_0 -  \frac{\Delta t A_{kl}}{V} \frac{c}{2} E_0 \\
+        \mathbf{0} - \frac{\Delta t A_{kl}}{V} \frac{c^2}{6} E_0
+	  	\end{matrix} \right)
+    = \left( \begin{matrix}
+             E_0 (1 - \beta) \\
+             -\frac{\beta}{3} c E_0
+             \end{matrix} \right) \\
+%
+	\mathcal{U}_l(t = \Delta t) &= \mathcal{U}_l (t = 0) - \frac{\Delta t}{V} (-\mathcal{F}_{1/2}) 
+A_{kl} \label{eq:zero-flux-update-l}\\
+	&=	\left(\begin{matrix}
+        0 +  \frac{\Delta t A_{kl}}{V} \frac{c}{2} E_0 \\
+        \mathbf{0} + \frac{\Delta t A_{kl}}{V} \frac{c^2}{6} E_0
+	  	\end{matrix} \right)
+    = \left( \begin{matrix}
+             \beta E_0 \\
+             \frac{\beta}{3} c E_0
+             \end{matrix} \right)
+\end{align}
+
+where the minus sign for the intercell flux $(-\mathcal{F}_{1/2})$ in eq. 
+\ref{eq:zero-flux-update-l} stems from the orientation of the effective surface $\mathbf{A}_{kl}$.
+
+
+The takeaway here is that after a single time step, both particles $k$ and $l$ will have nonzero 
+energy \emph{and} nonzero photon flux $\F$. 
+For the photon fluxes of the particle $l$, we see that $|\F_l| = \frac{1}{3} c E_l$ with $E_l = 
+\beta E_0$, meaning that the photon flux corresponds to the optically thick, diffusion limit. For 
+particle $k$ we have $|\F_k| = \frac{\beta}{1 - \beta} c E_k$ with $E_k = (1 - \beta) E_0$. 
+Comparing the particle volume $V$ and effective surface $A_{kl}$ to a regular cell of edge length 
+$L$, then $V = L^3$ and $A_{kl} = L^2$. Simultaneously this gives us a comparative CFL condition: $L 
+\geq c \Delta t$. This simple comparison limits the possible values of $\beta$ to $0 \leq \beta 
+\leq \frac{1}{2}$, given that all terms of $\beta$ are be positive. The limits translate to 
+$0 \leq |\F_k| \leq c E_k$ for the photon flux, meaning that particle $k$ can end up in any state 
+between no net flux, and the free streaming, optically thin limit.
+
+
+
+
+
+
 
 
 

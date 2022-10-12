@@ -7,7 +7,7 @@
 \subsection{The Equations of Radiative Transfer}
 %----------------------------------------------------
 
-GEARRT follows the \citet{RAMSES} scheme.
+GEARRT follows the \citet{ramses-rt13} scheme.
 
 
 The equation of radiative transfer is given by
@@ -55,10 +55,9 @@ $\F$ is the radiation flux, and has units of $\text{erg / cm}^2 \text{ / Hz / s}
 
 
 To close this set of equations, an expression (model) for the pressure tensor
-$\mathds{P}_\nu$ is necessary.  We use the so-called ``M1 closure'' where we
+$\mathds{P}_\nu$ is necessary.  We use the so-called ``M1 closure'' 
+\citep{levermoreRelatingEddingtonFactors1984a} where we
 describe the pressure tensor via the Eddington tensor $\mathds{D}_\nu$:
-
-\todo{Citation for M1 closure}
 
 \begin{equation}
 	\mathds{P}_\nu = \mathds{D} E_\nu
@@ -91,7 +90,7 @@ The M1 closure sets the Eddington tensor to have the form
 \subsection{RHD: Coupling to Hydrodynamics}
 %---------------------------------------------------
 
-Currently, we don't take into account the effects of radiation pressure on the
+Currently\footnote{State 2022}, we don't take into account the effects of radiation pressure on the
 gas. We only consider heating and ionization.
 
 Let
@@ -118,3 +117,19 @@ and the photoionization rate of the gas is given by
 \begin{align}
 \Gamma_{\nu, j} = c \ \sigma_{\nu j} \ N_\nu
 \end{align}
+
+
+
+Finally, the photon absorption/destruction rate must be equal as ionization rate. For an ionizing species $j$:
+%
+\begin{align}
+\DELDT{n_j} &= c \ \sigma_{\nu j}  N_\nu \\
+\DELDT{N_\nu} &= -c \ \sigma_{\nu j} n_j
+\end{align}
+
+hence in terms of photon energy density $E_\nu$:
+
+\begin{align}
+\DELDT{E_\nu} &= h \ \nu \DELDT{N_\nu}  = -h\ \nu \ c \ \sigma_{\nu j} n_j
+\end{align}
+

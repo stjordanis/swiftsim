@@ -4,7 +4,7 @@
 
 The Meshless methods are a way to solve hyperbolic systems of conservation laws of the form
 \begin{equation}
-		\DELDT{\mathcal{U}} + \nabla \mathcal{F}(\mathcal{U}) = 0 \label{eq:conservation-law}
+    \DELDT{\mathcal{U}} + \nabla \mathcal{F}(\mathcal{U}) = 0 \label{eq:conservation-law}
 \end{equation}
 
 and are used to solve the hydrodynamics equations.
@@ -19,8 +19,8 @@ The meshless schemes rely on the ``paritions of unity''.
 The partition of unity assigned to a particle $i$ is defined as:
 
 \begin{align}
-	\psi_i(\x) &= \frac{1}{\omega(\x)} W(\x - \x_i, h(\x))		\label{psi} \\
-	\omega(\x) &= \sum_j W(\x - \x_j, h(\x)) 					\label{omega}
+	\psi_i(\x) &= \frac{1}{\omega(\x)} W(\x - \x_i, h(\x))		\label{eq:psi} \\
+	\omega(\x) &= \sum_j W(\x - \x_j, h(\x)) 					\label{eq:omega}
 \end{align}
 
 where $h(\x)$ is the smoothing length and $\omega(\x)$ is used to normalise the 
@@ -29,14 +29,14 @@ volume partition at any point $\x$.
 The particle ``volumes'' are given by
 
 \begin{align}
-	V_i &= \int_V \psi_i(\x) \de V \approx \frac{1}{\omega(\x_i)} \\ \label{psi_volume_integral}
+	V_i &= \int_V \psi_i(\x) \de V \approx \frac{1}{\omega(\x_i)} \label{psi_volume_integral}
 \end{align}
 
 
 The actual state updates are given by
 
 \begin{equation}
-	\frac{\D}{\D t} (V_i \U_{k,i}) + \sum_j \F_{k,ij} \cdot \Aijm = 0
+	\frac{\D}{\D t} (V_i \mathcal{U}_{k,i}) + \sum_j \mathcal{F}_{k,ij} \cdot \Aijm = 0
 \end{equation}
 
 
@@ -46,7 +46,8 @@ with
 	\Aijm^\alpha = V_i \psitilde_j^\alpha (\x_i) - V_j\psitilde_i^\alpha (\x_j) 			\label{eq:HopkinsAij}
 \end{equation}
 
-for every component $k$ of the state vector $\U$ and for every gradient component $\alpha$
+for every component $k$ of the state vector $\mathcal{U}$ and for every coordinate dimension
+$\alpha$.
 
 The $\psitilde(\x)$ come from the $\mathcal{O}(h^2)$ accurate discrete gradient expression from \cite{lansonRenormalizedMeshfreeSchemes2008}:
 

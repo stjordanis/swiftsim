@@ -3,10 +3,10 @@
 %======================================================
 
 
-The core idea of the numerical solution for the radiative transfer equations
-follows \cite{ramses-rt13} and \cite{ramses-rt15}, but it's adapted to work
-with meshless methods and independent task-based parallelism instead of cells
-using adaptive mesh refinement.
+% The core idea of the numerical solution for the radiative transfer equations
+% follows \cite{ramses-rt13} and \cite{ramses-rt15}, but it's adapted to work
+% with meshless methods and independent task-based parallelism instead of cells
+% using adaptive mesh refinement.
 
 
 
@@ -19,16 +19,18 @@ using adaptive mesh refinement.
 %---------------------------------------------
 
 
-
-The equations \ref{eq:dEdt-freq} - \ref{eq:dFdt-freq} are still frequency specific,
-and in order to obtain the full radiation, they need to be discretized.
-For a rough approximation of multifrequency, the relevant frequency range is
-split into a number $M$ of mutually exclusive photon groups of frequency ranges:
+The equations \ref{eq:dEdt-freq} - \ref{eq:dFdt-freq} are still frequency specific.
+These equations need first to be discretized in frequency. For a rough approximation of 
+multifrequency, the relevant frequency range is split into a number $M$ of mutually 
+exclusive photon groups of frequency ranges:
 
 \begin{align}
-	& [\nu_{00}, \nu_{01}\ :\ \nu_{10}, \nu_{11}\ : ... \: \ \nu_{M0}, \nu_{M1}\ ] = [\nu_{}, \infty [ \\
-	E_i &= \int\limits_{\nu_{i0}}^{\nu_{i1}} E_\nu d\nu \\
-	\F_i &= \int\limits_{\nu_{i0}}^{\nu_{i1}} \F_\nu d\nu
+	& [\nu_{00}, \nu_{01}\ : \ \nu_{10}, \nu_{11}\ : ... \ : \ \nu_{M0}, \nu_{M1}\ ] = 
+        [\nu_{0}, \infty [ \\
+	E_i &= 
+        \int\limits_{\nu_{i0}}^{\nu_{i1}} E_\nu d\nu \\
+	\F_i &=   
+       \int\limits_{\nu_{i0}}^{\nu_{i1}} \F_\nu d\nu
 \end{align}
 
 
@@ -37,33 +39,24 @@ Giving us the following discretized equations to solve:
 
 \begin{align}
 	\DELDT{E_i} + \nabla \cdot \F_i &=
-		- \sum\limits_{j}^{\absorbers} n_j \sigma_{i j} c E_i + \dot{E}_i^* + \dot{E}_i ^{rec}
+		- \sum\limits_{j}^{\absorbers} n_j \sigma_{i j}^N c E_i + \dot{E}_i^* + \dot{E}_i ^{rec}
 		\label{eq:dEdt-group} \\
 	\DELDT{\F_i} + c^2 \ \nabla \cdot \mathds{P}_i &=
-		- \sum\limits_{j}^{\absorbers} n_j \sigma_{i j} c \F_i
+		- \sum\limits_{j}^{\absorbers} n_j \sigma_{i j}^N c \F_i
 		\label{eq:dFdt-group}
 \end{align}
 
 
-where
-\begin{align}
-	\sigma_{ij}
-        &= \frac{
-                \int\limits_{\nu_{i0}}^{\nu_{i1}} \sigma_{\nu j} E_\nu / (h \nu) \de \nu
-            } {
-                \int\limits_{\nu_{i0}}^{\nu_{i1}} E_\nu / (h \nu) \de \nu
-            }
-		\approx \frac{
-            \int\limits_{\nu_{i0}}^{\nu_{i1}} \sigma_{\nu j} J_\nu / (h \nu) \de \nu
-            }{
-                \int\limits_{\nu_{i0}}^{\nu_{i1}} J_\nu / (h \nu) \de \nu
-            }
-\end{align}
+The expression for the number weighted average cross section $\sigma_{ij}^N$ is given in eq. 
+\ref{eq:sigma_N}.
 
 The approximation on the right hand side is a simplification obtained by assuming
 a frequency distribution of energy $J_{\nu}$ for the radiative sources, e.g. a blackbody.
+In the implementation, the integrals are computed using the GSL library's integral
+functions.
 
-Finally, the radiation pressure tensor is discretized in the same manner:
+The radiation pressure tensor is discretized in the same manner:
+
 
 \begin{align}
 	\mathds{P}_i &=
@@ -81,8 +74,99 @@ Finally, the radiation pressure tensor is discretized in the same manner:
 
 
 
+For the computation of the  photoheating and photionization rates, we need to introduce the mean 
+photon energy of the frequency bin $i$, $\overline{\epsilon}_i$:
+
+\begin{align}
+\overline{\epsilon}_i \equiv 
+    \frac{E_i}{N_i} = 
+    \frac{
+        \int\limits_{\nu_{i0}}^{\nu_{i1}} E_\nu \ d\nu
+        }{
+        \int\limits_{\nu_{i0}}^{\nu_{i1}} N_\nu \ d\nu
+        }  
+    \approx
+    \frac{
+        \int\limits_{\nu_{i0}}^{\nu_{i1}} J_\nu \ d\nu
+        }{
+        \int\limits_{\nu_{i0}}^{\nu_{i1}} J_\nu / h\nu \ d\nu
+        }
+\end{align}
+
+The photoheating rate of the gas for the photon group $i$ and ionizing species $j$ then becomes:
+
+\begin{align}
+\mathcal{H}_{i, j} &=
+\left[
+		\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu h \nu N_\nu  \sigma_{j\nu} -
+	h \nu_{ion,j}\
+		\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu N_\nu \sigma_{j\nu} \
+\right] \ c \ n_j \\
+%
+&=
+\left[
+	\sigma_{ij}^E E_i - h \nu_{ion,j}\ \sigma_{ij}^N N_i
+\right]  c \ n_j \\
+&=
+\left[
+	\sigma_{ij}^E \overline{\epsilon}_i - h \nu_{ion,j}\ \sigma_{ij}^N
+\right]  N_i\ c \ n_j \\
+&=
+\left[
+	\sigma_{ij}^E  - h \nu_{ion,j}\ \sigma_{ij}^N /\ \overline{\epsilon}_i
+\right]  E_i\ c \ n_j
+\end{align}
 
 
+
+And the photoionization rate is given by:
+\begin{align}
+\Gamma_{i, j}
+	&=
+		c \ \int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ \sigma_{\nu j} N_\nu \\
+	&= c \ \sigma_{ij}^N N_i
+\end{align}
+
+Here we are using introduced the number- and energy-weighted average cross sections:
+\begin{align}
+\sigma_{ij}^N &=
+		\frac{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ N_\nu \ \sigma_{j\nu}
+		} {
+		  \int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ N_\nu
+		}
+		\approx
+		\frac{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ J(\nu) / (h \ \nu) \sigma_{j\nu}
+		} {
+  		\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ J(\nu) / (h \ \nu)
+		} \label{eq:sigma_N}\\
+\sigma_{ij}^E &=
+		\frac{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ h \nu N_\nu \ \sigma_{j\nu}
+		}	{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ h \nu N_\nu
+		}
+		\approx
+		\frac{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ J(\nu) \  \sigma_{j\nu}
+		}	{
+			\int\limits_{\nu_{i0}}^{\nu_{i1}}\de \nu \ J(\nu)
+		} \label{eq:sigma_E}
+\end{align}
+
+
+
+
+Finally, the photon absorption/destruction rates for a frequency bin $i$ and ionizing species $j$ 
+are given by
+
+\begin{align}
+\DELDT{E_i} &= 
+    \deldt{(N_i \ \overline{\epsilon}_i)} = 
+    \overline{\epsilon}_i \DELDT{N_i} =  
+    -\overline{\epsilon}_i c \ \sigma_{i j} ^ N n_j
+\end{align}
 
 
 
@@ -122,14 +206,28 @@ In order to do so, the equations are decomposed into three steps that are execut
 %--------------------------------------------------------------------
 
 
-In the injection step, the radiation is gathered from radiating sources
-(stars/stellar populations) and injected into the gas.
-The equation to be solved in this step is
+
+
+%-----------------------------------------
+\textbf{Injecting the Energy Density}
+%-----------------------------------------
+
+
+In the injection step, the radiation is gathered from radiating sources (stars/stellar populations) 
+and injected into the gas. The equation to be solved in this step is
 
 \begin{equation}
-		\DELDT{E_i} = \dot{E}_i^* \label{eq:solve-dEdt}
+    \DELDT{E_i} = \dot{E}_i^* \label{eq:solve-dEdt}
 \end{equation}
 
+where $\dot{E}_i^*$ is the total energy density in the frequency group $i$ emitted by all stars $k$ 
+that are within range of the corresponding particle. If each star $k$ deposits a fraction $\eta_k$ 
+of its respective total radiation energy density to be injected, then the total radiation energy 
+density injected into a single gas particle is given by:
+
+\begin{align}
+    \dot{E_i}^* = \sum_k E_{i,k}^* \eta_k \label{eq:injection_onto_particle}
+\end{align}
 
 This is solved using a simple finite difference discretization and first order
 forward Euler integration:
@@ -140,103 +238,125 @@ forward Euler integration:
 
 for each particle. The way the energy density $\dot{E}_i^*$ is deposited from
 stars onto particles corresponds to the way that feedback is done in SWIFT:
-active star particles ``push'' radiation onto both active and inactive particles.
+active star particles ``push'' radiation onto both active and inactive gas particles.
 
-At the moment, GEARRT only supports constant radiation injection rates $\dot{E}_i^*$
+At the moment, GEARRT only supports constant radiation injection rates $\dot{E}_{i,k}^*$
 which are specified by the user in the parameter file.
+\footnote{Technically, there is another scheme available, which is intended to reproduce 
+the \citet{ilievCosmologicalRadiativeTransfer2006} Test 4, but that one's hardly useful for 
+anything else.}
 
-\todo{Document other stellar emission rates once they're implemented}
-
-Note that the each star injects i
-
-Why don't we store the energy emission \emph{rate} of stars in hydro particles and interpolate the
-injected energy each hydro time step when the hydro particle is active? If a hydro particle has
-multiple star particle neighbours which in turn have different time step sizes, then we would need
-to store the emitted energy for each star time step size individually. This way, the correct amount
-of energy injected during a hydro/RT time step can be computed. Considering that we already deal
-with multiple photon groups, that would be a lot of information to store, as we'd also need to
-store the emission rates for each photon group. Furthermore, if a hydro particle has a time step
-larger than a neighbouring star particle, we'll be in trouble.
-
+% Why don't we store the energy emission \emph{rate} of stars in hydro particles and interpolate the
+% injected energy each hydro time step when the hydro particle is active? If a hydro particle has
+% multiple star particle neighbours which in turn have different time step sizes, then we would need
+% to store the emitted energy for each star time step size individually. This way, the correct amount
+% of energy injected during a hydro/RT time step can be computed. Considering that we already deal
+% with multiple photon groups, that would be a lot of information to store, as we'd also need to
+% store the emission rates for each photon group. Furthermore, if a hydro particle has a time step
+% larger than a neighbouring star particle, we'll be in trouble.
 
 
-\note{
-On the photon flux $\F_i$ as conserved and volume specific quantity (what I called ``density quantity'' before):
-At first sight, the units of the conserved quantity of a particle $k$, $\F_{i,k} V_k$, don't seem to make sense.
-$\F_{i,k}$ is here the photon flux at particle $k$'s position, and is the same as in equation \ref{eq:dEdt-group} and \ref{eq:dFdt-group}.
-The units are:
+% 
+% \note{
+% On the photon flux $\F_i$ as conserved and volume specific quantity (what I called ``density quantity'' before):
+% At first sight, the units of the conserved quantity of a particle $k$, $\F_{i,k} V_k$, don't seem to make sense.
+% $\F_{i,k}$ is here the photon flux at particle $k$'s position, and is the same as in equation \ref{eq:dEdt-group} and \ref{eq:dFdt-group}.
+% The units are:
+% \begin{align}
+% 	\left[ \F_{i,k} V_k \right] = \frac{\text{erg}}{\text{cm}^2 \text{ s}} \ \text{ cm}^3 = \frac{\text{erg cm}}{\text{s}}
+% \end{align}
+% 
+% Everything starts making more sense once we realise that in eq. \ref{eq:dFdt-group} a factor $\frac{1}{c}$ is ``swallowed'' in the divergence term.
+% The equation can be easily rewritten as
+% 
+% \begin{align}
+% 	\deldt \left( \frac{1}{c} \F_{i,k} \right) + c\ \Delta \cdot \mathds{P}_{i,k} = - \sum\limits_{j}^{\absorbers} n_j \sigma_{i j} \F_{i,k}
+% \end{align}
+% 
+% In which case the conserved quantity is $\frac{1}{c} \F_{i, k} V_k$ and has the units
+% \begin{align}
+% 	\left[ \frac{1}{c} \F_{i, k} V_k \right] = \frac{\text{s}}{\text{cm}}\ \frac{\text{erg}}{\text{cm}^2 \text{ s}} \ \text{ cm}^3 = \text{erg}
+% \end{align}
+% 
+% which is indeed a conserved quantity.
+% 
+% So we're all good as long as we're paying attention to $c$ throughout our computations.
+% }
+% 
+% 
+
+
+
+%------------------------------------------------------------------------------
+\textbf{Weights For Distribution Of Energy Density of a Star onto Particles}
+%------------------------------------------------------------------------------
+
+
+We now define the weights $\eta_s$ used to distribute the total radiation energy ejected by a star 
+$s$ over a time step $\Delta t$ onto the surrounding gas particles $p$.
+
+
+A natural way of depositing the energy density from the star on a neighbouring gas particle is to 
+make use of the already present partition of unity, $\psi_p(\x_p - \x_s)$ (see eqs. 
+\ref{eq:psi} - \ref{eq:omega}), as it guarantees to sum up to unity, and additionally is taking 
+into account the particle configuration due to its normalization. As the whole business with 
+particle and star indices can easily get unwieldy and confusing, let's write the equations down 
+explicitly for reference:
+
+% direction of the distance vector 
+% between the star and the gas particle. Assuming that the medium between a star particle and any 
+% surrounding gas neighbour is optically thin, we have
+% 
+\begin{align*}
+	\psi_i(\x_j) &\equiv \frac{1}{\omega(\x_j)} W(\x_j - \x_i, h_j) 	\\
+	\omega(\x_j) &\equiv \sum_k W(\x_j - \x_k, h_j) 						  	\\
+	\sum_i \psi_i(\x_j) &= \sum_i \psi(\x_j - \x_i, h_j) = \sum_i \frac{1}{\omega(\x_j)} W(\x_j - 
+\x_i, h_j) \\
+	&= \frac{1}{\omega(\x_j)} \sum_i  W(\x_j - \x_i, h_j) = \frac{\sum_i  W(\x_j - \x_i, h_j) }{ 
+\sum_k  W(\x_j - \x_k, h_j) } = 1
+\end{align*}
+
+% \begin{equation}
+% 	\F_{i,p} = c E_i \frac{\x_p - \x_s}{|\x_p - \x_s|} \psi_p(|\x_p - \x_s|)
+% \end{equation}
+
+
+Then the total emitted energy of the star $s$, $E_i(\x_s)$, is fully and self-consistently 
+distributed on the gas (here gas particles have the index $g$):
+
 \begin{align}
-	\left[ \F_{i,k} V_k \right] = \frac{\text{erg}}{\text{cm}^2 \text{ s}} \ \text{ cm}^3 = \frac{\text{erg cm}}{\text{s}}
+	\sum_g \psi_g(\x_s)\  E(\x_s) = \sum_g \psi(\x_s - \x_g, h_s) \ E(\x_s) = E(\x_s)
 \end{align}
 
-Everything starts making more sense once we realise that in eq. \ref{eq:dFdt-group} a factor $\frac{1}{c}$ is ``swallowed'' in the divergence term.
-The equation can be easily rewritten as
+
+For the actual distribution of the radiation from stars to gas particles, the sum over neighbouring 
+stars from the gas particle's point of view look like:
 
 \begin{align}
-	\deldt \left( \frac{1}{c} \F_{i,k} \right) + c\ \Delta \cdot \mathds{P}_{i,k} = - \sum\limits_{j}^{\absorbers} n_j \sigma_{i j} \F_{i,k}
+	E_i (\x = \x_{gas}) = \sum_{stars} E_i(\x_{star}) \ \psi(\x_{star} - \x_{gas}, h(\x_{star}))
 \end{align}
 
-In which case the conserved quantity is $\frac{1}{c} \F_{i, k} V_k$ and has the units
+which ultimately gives us
+
+
 \begin{align}
-	\left[ \frac{1}{c} \F_{i, k} V_k \right] = \frac{\text{s}}{\text{cm}}\ \frac{\text{erg}}{\text{cm}^2 \text{ s}} \ \text{ cm}^3 = \text{erg}
+    \eta_s = \psi(\x_{s} - \x_{g}, h(\x_{s}))
 \end{align}
 
-which is indeed a conserved quantity.
-
-So we're all good as long as we're paying attention to $c$ throughout our computations.
-}
 
 
 
+The potential problem here is that unless the particle distribution is somewhat symmetric, we won't 
+get a net isotropic flux. So instead, we ``correct'' the weight $\psi_p$ in an attempt to improve 
+the isotropy of the deposited net flux. We are limited in the manner we can compute the correction 
+term - we can't afford to either add a new star - particle interaction loop, nor can we store all 
+the neighbour data for every star individually. So instead, we use the following:
 
-
-%-----------------------------------------
-\textbf{Injecting the Flux}
-%-----------------------------------------
-
-
-We need to look into more details on how to inject radiation fluxes. For grid codes, the net injected flux into a cell will be zero since we assume that stars are points that radiate isotropically. However for particle codes, we don't have that luxury, as we are interacting a star particle with gas particles, and if we inject flux carelessly, we can end up with anisotropic fluxes where we need them to be isotropic. This is particularly important in the cases where we're especially interested in the effect of radiation pressure.
-
-A natural way of depositing the flux from the star on a neighbouring gas particle is to use the direction of the distance vector between the star and the gas particle. Assuming that the medium between a star particle and any surrounding gas neighbour is optically thin, we have
-
-\begin{equation}
-	\F_{i,p} = c E_i \frac{\x_p - \x_s}{|\x_p - \x_s|} \psi_p(|\x_p - \x_s|)
-\end{equation}
-
-where $\F_{i,p}$ is the flux of photon group $i$ that we assign to a particle $p$, $E_i$ is the total emitted energy of the star at a given time step for the photon frequency group $i$, $\x_p$ is the position of a gas particle neighbour of the star particle with position $\x_s$, and $\psi_p(r)$ is a weight assigned to the neighbouring gas particle which depends in some manner on their respective distance. Naturally, we need to have $\sum_p \psi(|\x_p - \x_s|) = 1$.
-
-The potential problem here is that unless the particle distribution is somewhat symmetric, we won't get a net isotropic flux. So instead, we ``correct'' the weight $\psi_p$ in an attempt to improve the isotropy of the deposited net flux. We are limited in the manner we can compute the correction term - we can't afford to either add a new star - particle interaction loop, nor can we store all the neighbour data for every star individually. So instead, we use the following:
-
-For simplicity, let's consider the problem in 2D. We divide the space around a star into four quadrants like in Figure~\ref{fig:flux-injection-correction-method}, and sum up the total weights of the neighbouring gas particles in each quadrant $w_1$, $w_2$, $w_3$, and $w_4$. We now add a correction factor $\mu_1$,  $\mu_2$,  $\mu_3$,  $\mu_4$ to each quadrant in an attempt to improve the isotropy by applying two constraints:
-
-\begin{enumerate}
-\item The total weight must remain constant:
-\begin{equation}
-\mu_1 w_1 + \mu_2 w_2 + \mu_3 w_3 + \mu_4 w_4 = w_1 + w_2 + w_3 + w_4
-\end{equation}
-
-\item The modified weight of each quadrant should be equal, such that at least along these four directions, the flux is isotropic:
-\begin{equation}
-\mu_1 w_1 = \mu_2 w_2 = \mu_3 w_3 = \mu_4 w_4
-\end{equation}
-\end{enumerate}
-
-After some simple algebra, we arrive at
-
-\begin{equation}
-\mu_a = \frac{\sum_b w_j}{4 w_a} \label{eq:isotropy-correction-general}
-\end{equation}
-
-The extension to 3D is trivial, the factor 1/4 is just turned into 1/8. The
-correction term~\ref{eq:isotropy-correction-general} needs a small modification
-for cases where there is a quadrant which contains zero particles and hence
-zero weight: Let $q_{nz}$ be the number of quadrants with non-zero weight, i.e.
-with non-zero particles in them. Then
-
-\begin{equation}
-	\mu_a = \frac{\sum_b w_b}{q_{nz} w_a} \label{eq:isotropy-correction-with-zero}
-\end{equation}
-
+For simplicity, let's consider the problem in 2D. We divide the space around a star into four  
+quadrants like in Figure~\ref{fig:flux-injection-correction-method}, and sum up the total weights 
+of the neighbouring gas particles in each quadrant $w_1$, $w_2$, $w_3$, and $w_4$. We now add a 
+correction factor $\mu_1$,  $\mu_2$,  $\mu_3$,  $\mu_4$ to each quadrant in an attempt to improve 
+the isotropy by applying two constraints:
 
 \begin{figure}
 	\centering
@@ -250,15 +370,124 @@ with non-zero particles in them. Then
 	}
 \end{figure}
 
+\begin{enumerate}
+    \item The total weight must remain constant:
+    
+\begin{equation}
+\mu_1 w_1 + \mu_2 w_2 + \mu_3 w_3 + \mu_4 w_4 = w_1 + w_2 + w_3 + w_4
+\end{equation}
+
+    \item The modified weight of each quadrant should be equal, such that at least along these four 
+    directions, the flux is isotropic:
+    
+\begin{equation}
+\mu_1 w_1 = \mu_2 w_2 = \mu_3 w_3 = \mu_4 w_4
+\end{equation}
+
+\end{enumerate}
+
+After some simple algebra, we arrive at
+
+\begin{equation}
+\mu_a = \frac{\sum_b w_j}{4 w_a} \label{eq:isotropy-correction-general}
+\end{equation}
+
+The extension to 3D is trivial, the factor 1/4 is just turned into 1/8, as we now have octants 
+instead of quadrants. The correction term~\ref{eq:isotropy-correction-general} needs a small 
+modification for cases where there is a octant which contains zero particles and hence zero 
+weight: Let $q_{nz}$ be the number of octants with non-zero weight, i.e. with non-zero particles 
+in them. Then
+
+\begin{equation}
+	\mu_a = \frac{\sum_b w_b}{q_{nz} w_a} \label{eq:isotropy-correction-with-zero}
+\end{equation}
 
 
-\todo{Also mention the injection weight for energies}
+this ultimately gives us
+
+\begin{align}
+    \eta_s = \mu_a \ \psi(\x_{s} - \x_{g}, h(\x_{s}))
+\end{align}
+
+where $a$ is the octant in which the gas particle resides.
 
 
 
 
 
 
+Finally, as a sanity check, consider we have 1 star only, and sum the total energy injected into 
+all gas particles.
+
+For any gas particle $p$, we have
+
+\begin{align}
+    E_i (\x = \x_{p}) = E_i(\x_{star}) \ \psi(\x_{star} - \x_{p}, h(\x_{star})) \ \mu_{a(p)}
+\end{align}
+
+with the definitions and constraints for the isotropy correction term $\mu_{a(p)}$:
+
+\begin{align}
+    w_{a(p)} &= \sum_{\mathrm{particles}\ p \in a} \psi(\x_{star} - \x_{p},  h(\x_{star}))\\
+    \sum_b w_b &= \sum_b w_b \mu_b\\
+    \sum_b w_b &= \sum_b \sum_{p\in b} \psi_p(h(\x_{star})) = \sum_{\text{all particles}\ p} 
+\psi_p (h(\x_{star})) = 1
+\end{align}
+
+Then the sum over all particles is
+
+\begin{align}
+    \sum_p E_i (\x_{p}) &= \sum_p E_i(\x_{star}) \ \psi(\x_{star} - \x_{p}, h(\x_{star})) \ 
+\mu_{a(p)} \\
+        &= E_i(\x_{star}) \sum_p \ \psi(\x_{star} - \x_{p}, h(\x_{star})) \ \mu_{a(p)} \\
+        &= E_i(\x_{star}) \left( \sum_{p \in a} \ \psi_p \ \mu_{a} + \sum_{p \in b} \ \psi_p \ 
+\mu_{b} + ... \right)\\
+        &= E_i(\x_{star})  \sum_b \sum_{p \in b} \ \psi_p \ \mu_{b}\\
+        &= E_i(\x_{star})  \sum_b \mu_{b} \sum_{p \in b} \ \psi_p \\
+        &= E_i(\x_{star})  \sum_b \mu_{b} w_b \\
+        &= E_i(\x_{star})
+\end{align}
+
+
+
+
+
+
+
+
+
+
+%------------------------------------------------------------------------------
+\textbf{Injecting the Flux}
+%------------------------------------------------------------------------------
+
+We need to look into more details on how to inject radiation fluxes. For grid codes, the net 
+injected flux into a cell will be zero since we assume that stars are points that radiate 
+isotropically. For particle codes, we don't have that luxury, as we are interacting a star 
+particle with gas particles, and if we inject flux carelessly, we can end up with anisotropic fluxes 
+where we need them to be isotropic. 
+% This is particularly important in the cases where we're especially interested in the effect of 
+% radiation pressure.  
+
+In principle, we could use the same approach as for the energy density, and inject the flux 
+$\F_{i,p,s}$ of photon group $i$ injected from star $s$ that we assign to a particle $p$ according 
+to
+
+\begin{align}
+	\F_{i,p,s} &= \eta_s c E_{i,s} \mathbf{n}_{ps}  \\
+    \mathbf{n}_{ps} &=  \frac{\x_p - \x_s}{|\x_p - \x_s|} 
+\end{align}
+
+by making use of the energy density - flux relation $|\F| = c E$, or some other relation.
+
+However in practice, tests show that injecting \emph{no flux at all} leads to best results. Part of 
+the problem is that we consistently perform the transport step \emph{before} the thermochemistry 
+step. Injecting nonzero flux leads to the radiation energy very close to the star being transported 
+away before the thermochemistry step can heat up and ionize the gas sufficiently, leading to 
+a noticeable lack of ionization and lower temperature in the immediate proximity of the star.
+
+Not explicitly injecting flux is not a problem though, as it naturally ``develops'' in the 
+subsequent time step. See section \ref{chap:zero-flux-nonzer-energy} for details.
 
 
 
@@ -280,8 +509,8 @@ with non-zero particles in them. Then
 
 In this step, we solve
 \begin{align}
-		\DELDT{E_i} + \nabla \cdot \F_i &= 0 \label{eq:homogenized-dEdt}\\
-		\DELDT{\F_i} + c^2 \nabla \cdot \mathds{P}_i &= 0 \label{eq:homogenized-dFdt}
+    \DELDT{E_i} + \nabla \cdot \F_i &= 0 \label{eq:homogenized-dEdt}\\
+    \DELDT{\F_i} + c^2 \nabla \cdot \mathds{P}_i &= 0 \label{eq:homogenized-dFdt}
 \end{align}
 
 They are both in the form \ref{eq:conservation-law}, so we use the standard meshless technique:
@@ -291,7 +520,7 @@ They are both in the form \ref{eq:conservation-law}, so we use the standard mesh
 \end{align}
 
 where $k$, $l$ are particle indices, $V_k$ the associated particle volume,
-$\mathbf{A}_{kl}$ the effective surfaces \ref{eq:HopkinsAij} or \ref{eq:IvanovaAij}, and we have
+$\mathbf{A}_{kl}$ the effective surfaces \ref{eq:HopkinsAij}, and we have
 
 \begin{align}
 	\mathcal{U} =
@@ -309,7 +538,10 @@ $\mathbf{A}_{kl}$ the effective surfaces \ref{eq:HopkinsAij} or \ref{eq:IvanovaA
 
 
 
-To get the interparticle fluxes $\mathcal{F}_{kl}$, we also follow the meshless method.
+To get the interparticle fluxes $\mathcal{F}_{kl}$, we also follow the meshless method. Since the 
+particle positions shouldn't have changed since the last hydrodynamics drift, the particles' 
+smoothing lengths are still accurate, and we don't require an additional density loop for the 
+radiative transfer.
 
 We approximate the problem by defining an ``interface'' at the position
 
@@ -324,24 +556,45 @@ and extrapolate the value of the conserved variables at the position:
         \mathbf{x}_{kl}) \approx \mathcal{U}_{k, l} + \DELDX{ \mathcal{U}_{k, l}}\ (\mathbf{x}_{kl} - \mathbf{x}_{k,l})
 \end{equation}
 
-from which we get the fluxes (in the conservation law sense)
+The gradients $\DELDX{\mathcal{U}_{k,l}}$ are estimated using eqn. \ref{eq:gradient}, for which a 
+particle-particle interaction loop is required. Since no density interaction loop is necessary for 
+RT, the gradient particle loop constitutes the first particle interaction loop in the RT block.
+Furthermore, the gradient extrapolation is equivalent from going from a piecewise constant 
+reconstruction of the radiation field to a piecewise linear one, which makes the method second 
+order accurate. To prevent oscillations and instabilities from occurring, we need to employ a flux 
+limiter at this point, which effectively reduces the gradient slopes whenever necessary.
+For details about the limiters, please refer to section \ref{chap:limiters}.
+
+
+In the next step, we solve a Riemann problem with the left state $\mathcal{U}_k$ and right state 
+$\mathcal{U}_l$. To reduce the problem to a 1D Riemann problem, the radiation fluxed $\F_i$ (i.e. 
+the second component of the state vector $\mathcal{U}$) is projected along the normal vector 
+between the particle and the ``interface position'' $\x_{kl}$. The 1D Riemann problem is solved 
+using an approximate Riemann solver, which is described in section \ref{chap:riemann}. The solver 
+provides us with a solution for the ``intercell'' (hyperbolic) flux $\mathcal{F}$:
 
 \begin{equation}
 	\mathcal{F}_{k, l}(\mathbf{x} =
-        \mathbf{x}_{kl}) = \mathcal{F}\left( \mathcal{U}_{k, l}(\mathbf{x} = \mathbf{x}_{kl}) \right)
+        \mathbf{x}_{kl}) = \mathcal{F}\left( \mathcal{U}_{\text{left}} = \mathcal{U}_{k}, 
+\mathcal{U}_{\text{right}} = \mathcal{U}_l \right)
 \end{equation}
 
+During the interaction loop, the total sum $\sum_l \mathcal{F}_{kl} A_{kl}$ for each particle 
+$k$ is collected. Upon completion, we now can finish the transport step and compute eq. 
+\ref{eq:meshless}, or explicitly:
 
-The gradients are obtained using equation \ref{eq:gradient}, for which a neighbour
-loop is necessary.
+\begin{align}
+	\mathcal{U}_k(t + \Delta t) = \mathcal{U}_k (t) - \frac{\Delta t}{V_k} \sum\limits_{l} \mathcal 
+F_{kl} A_{kl} \label{eq:transport-update-explicit}
+\end{align}
 
 
-Since the meshless method we use is second order accurate, we need to employ a
-flux limiter to prevent oscillations and instabilities from occurring.
-(Note however that because we're using the operator splitting approach, the
-final RT method will only be first order accurate in time!) For details about
-the limiters, please refer to section \ref{chap:limiters}.
 
+\todo{symmetric interactions with inactive particles.}
+
+
+% (Note however that because we're using the operator splitting approach, the
+% final RT method will only be first order accurate in time!) 
 
 
 
@@ -349,9 +602,53 @@ the limiters, please refer to section \ref{chap:limiters}.
 \subsubsection{Third step: Thermochemistry}
 %---------------------------------------------
 
-\todo{Write down what happens to the gas}
-\todo{Add eqations for photon destruction terms, and how you compute them. You
-want to reference them in the code.}
+The actual thermochemistry is solved using the GRACKLE \citep{smithGrackleChemistryCooling2017a} 
+library. Currently\footnote{State 2022} only the ``6 species network'' (H$^0$, H$^+$, He$^0$, 
+He$^+$, He$^{++}$, $e^{-}$)
+is supported by GEARRT. For the scope of this documentation, it should suffice to note that we need 
+to provide GRACKLE with the particles' gas quantities (internal energy, density, ion mass 
+fractions), the time step over which to solve the thermochemistry, as well as the photoheating and 
+photoionization rates. In turn, GRACKLE provides us with the updated internal energy and ion mass 
+fractions of the gas, which we only need to pass on to the corresponding particle fields.
+
+
+While the (total) photoheating rate $\mathcal{H} = \sum_{i,j} \mathcal{H}_{ij}$ and the 
+photoionization rates $\Gamma_{j} = \sum_i \Gamma_{i,j}$ are passed on to GRACKLE directly, the 
+removal of the absorbed radiation needs to be done manually.
+
+We solve this again using a simple first order forward Euler integration:
+
+\begin{align}
+    \frac{E_i (t + \Delta t) - E_i}{\Delta t} = -\overline{\epsilon}_i c \ \sum_j \sigma_{i j} ^ 
+N n_j
+\end{align}
+
+A minor complication is that the number density of the ionizing species $n_j$ is not constant over 
+the time step $\Delta t$, as we are currently in the process of ionizing the gas. This may lead to 
+scenarios where the absorption rate is overestimated by not accounting for the ionization during 
+the thermochemistry time step. To account for this effect, we take the average absorption rate over 
+the time step instead:
+
+
+\begin{align}
+    \frac{E_i (t + \Delta t) - E_i}{\Delta t} 
+        = -\overline{\epsilon}_i c \ \sum_j \sigma_{i j} ^ N  \
+    \frac{n_j(t + \Delta t) - n_j(t)}{2}
+\end{align}
+
+Conveniently, the updated number densities $n_j(t + \Delta t)$ are provided to us by GRACKLE. The 
+final equation used to remove absorbed photons from the radiation field is:
+
+
+\begin{align}
+    E_i (t + \Delta t) 
+        = E_i(t) - \overline{\epsilon}_i c \ \sum_j \sigma_{i j} ^ N  \
+    \frac{n_j(t + \Delta t) - n_j(t)}{2} \ \Delta t
+\end{align}
+
+
+
+
 
 In this final step, we solve for the interaction between photons and the gas.
 The equations to be solved are
@@ -366,10 +663,8 @@ The equations to be solved are
 
 
 
-\todo{``10 $\%$ rule'' and why we don't do it (grackle does it already).}
+% \todo{``10 $\%$ rule'' and why we don't do it (grackle does it already).}
 
-\todo{Interpolation between initial and final ionization states for photon
-destruction rate}
 
 
 
@@ -404,7 +699,27 @@ file.
 %where $h_i$ is the smoothing length of a gas particle.
 %
 %\todo{check this claim for CFL condition}
+
+
+
+
+%---------------------------------------------
+% \subsubsection{CFL condition}
+%---------------------------------------------
+% \todo{all of this}
+
+
+
+
+
+%---------------------------------------------
+\subsubsection{Cosmology}
+%---------------------------------------------
 \todo{all of this}
+
+
+
+
 
 
 %---------------------------------------------------------------------------------------
@@ -414,11 +729,12 @@ Closure} \label{chap:riemann}
 
 
 To solve for the interparticle (``intercell'') flux $\mathcal{F}_{1/2}$, we use the extrapolated
-states $E_{k,l}$ and $\F_{k,l}$ to compute the states and fluxes of the conservation law
-$\mathcal{U}_{k,l}$ and $\mathcal{F}_{k,l}$. The vector valued photon flux density components are
-then projected along the unit vector pointing from the particle towards the surface, allowing us to
-tread each component individually as a one dimensional problem. We then adapt the convention that
-particle $k$ is the left state of the Riemann problem, while particle $l$ is the right state.
+states $E_{k,l}$ and $\F_{k,l}$ to compute the states and fluxes of the conservation law,
+$\mathcal{U}_{k,l}$ and $\mathcal{F}_{k,l}$. The components of the vector valued photon flux 
+density $\F_{k,l}$ are projected along the unit vector pointing from the particle towards the 
+surface, allowing us to treat each component individually as a one dimensional problem. We then 
+adapt the convention that particle $k$ is the left state of the Riemann problem, while particle $l$ 
+is the right state.
 
 The \textbf{Global Lax Friedrich (GLF)} Riemann solver \citep{ramses-rt13} then gives the
 solution for the intercell flux:
@@ -430,8 +746,27 @@ solution for the intercell flux:
 
 
 
-\todo{HLL solver}
+An alternative is the \textbf{Harten - Lax - van Leer (HLL)} Riemann solver\footnote{According to 
+\citet{gonzalezHERACLESThreedimensionalRadiation2007}, it should actually be a Harten - Lax - van 
+Leer - Einfeldt (HLLE) scheme, yet \citet{ramses-rt13} refers to it as an HLL scheme. Because I 
+can't be arsed to change it everywhere in the code and the documentation, I keep using the RAMSES 
+``HLL'' name convention.} The solvers predicts the intercell flux $\mathcal{F}_{1/2}$:
 
+\begin{align}
+	\mathcal{F}_{1/2}(\mathcal{U}_L, \mathcal{U}_R) &=
+		\frac{ \lambda^{+} \mathcal{F}_{L} - \lambda^{-} \mathcal{F}_{R} +  \lambda^{+}  
+\lambda^{-} (\mathcal{U}_R - \mathcal{U}_L)}{ \lambda^{+} - \lambda^{-} } 
+\label{eq:riemann-HLL} \\
+    \lambda^+ &= \max(0, \lambda_{max})\\
+    \lambda^- &= \min(0, \lambda_{min})
+\end{align}
+
+
+Here, $\lambda^{max}$ and $\lambda^{min}$ are the minimum and the maximum of the Eigenvalues of the 
+Jacobian matrix $\frac{\del \mathcal{F}(\mathcal{U})}{\del \mathcal{U}}$. It turns out that the 
+Eigenvalues can be described using only two parameters, the angle between the flux and the 
+interaction interface, $\theta$, and the reduced flux $\mathbf{f} = \F / (cE)$. Rather then 
+continuously computing them on-the-fly for every interaction, they are tabulated and interpolated.
 
 
 
@@ -440,17 +775,6 @@ solution for the intercell flux:
 %---------------------------------------------------------------------------------------
 \subsubsection{Slope and Flux Limiters} \label{chap:limiters}
 %---------------------------------------------------------------------------------------
-
-\todo{check whether intro needs reworking}
-
-The sophisticated limiters that we use for hydro don't prevent instabilities for
-RT, so we need to go back to less sophisticated ones.
-
-\todo{check this statement:
-    \textit{The sophisticated limiters that we use for hydro don't prevent instabilities for
-    RT, so we need to go back to less sophisticated ones.
-    }
-}
 
 For each quantity $Q_{k,l} \in (E_{k,l}, \F_{k,l})$, we extrapolate the value at the interface
 $\x_{kl}$ using the estimated gradient $dQ_{k,l}$. The limiter then compares the two slopes
@@ -464,107 +788,131 @@ limited slopes, i.e:
 	dQ_{k, limited} &= \alpha\ dQ_k\\
 	dQ_{l, limited} &= \alpha\ dQ_l
 \end{align}
-The two limiters that worked in tests are the \textbf{minmod limiter}:
+The two limiters that worked well in tests are the \textbf{minmod limiter}\footnote{The minmod 
+limiter is the default limiter in use. There is no option to select which limiter to use, if you 
+want to change that you'll need to look into the code and replace it.. The other limiters described 
+here are still in the source code, they are just unused.}:
 
 \begin{align}
-	\text{minmod\_limiter}(dQ_k, dQ_l) =
-		\begin{cases}
-		\text{if } dQ_k \times dQ_l > 0:
-			\begin{cases}
-				\text{if } |dQ_k| < |dQ_l| :\quad &\alpha = dQ_k / dQ_l \\
-				\text{else: } &\alpha = dQ_l / dQ_k\\
-			\end{cases}\\
-			\text{else: } \alpha = 0
-		\end{cases}
+% 	\alpha_{\text{minmod}}(dQ_k, dQ_l) =
+% 		\begin{cases}
+% 		\text{if } dQ_k \times dQ_l > 0:
+% 			\begin{cases}
+% 				\text{if } |dQ_k| < |dQ_l| :\quad &\alpha = dQ_k / dQ_l \\
+% 				\text{else: } &\alpha = dQ_l / dQ_k\\
+% 			\end{cases}\\
+% 			\text{else: } \alpha = 0
+% 		\end{cases}
+    \alpha_{\text{minmod}}(dQ_k, dQ_l) = 
+    \begin{cases}
+      dQ_k      & \text{ if } |dQ_k| < |dQ_l| \text{ and } dQ_k dQ_l > 0 \\
+      dQ_l      & \text{ if } |dQ_k| > |dQ_l| \text{ and } dQ_k dQ_l > 0 \\
+      0         & \text{ if }  dQ_k dQ_l \leq 0 
+    \end{cases}
 \end{align}
 
 and the \textbf{monotonized central difference (MC) limiter}:
 \begin{align}
 	r &= dQ_k / dQ_l \\
-	\text{mc\_limiter}(r) &= \max \left\{ 0, \min\left[\frac{1 + r}{2}, 2, 2r \right] \right\}
+	\alpha_{\text{MC}}(r) &= \max \left\{ 0, \min\left[\frac{1 + r}{2}, 2, 2r \right] \right\}
 \end{align}
 
-We now can compute the slope limited states $\mathcal{U}$ and conservation law fluxes $\mathcal{F}$
-at the interface and use the Riemann solver to obtain the interparticle flux.
-See section \ref{chap:riemann} for details on the Riemann solvers.
+Other possible choices are the \textbf{superbee} limiter:
 
-\todo{Describe other limiters. Maybe in the appendix?}
+\begin{align}
+	r &= dQ_k / dQ_l \\
+	\alpha_{\text{superbee}}(r) &= \max \left\{0,  \min (1, 2r), \min(2, r) \right\}
+\end{align}
 
-%In fact, we will be using two limiters at two different places.
-%First the gradients themselves are being slope limited.
-%The main idea is to make sure that if we extrapolate the gradients of a particle to its
-%neighbouring particles' positions, then the extrapolated value shouldn't be higher than the
-%highest
-%actual particle value, nor lower than the lowest actual value.
-%The ``true'' obtained gradient $\nabla \phi^i_{true}$ calculated by use of eqn. \ref{eq:gradient}
-%of any quantity $\phi^i$ needs to be limited by
+
+And the van Leer limiter:
+
+\begin{align}
+	r &= dQ_k / dQ_l \\
+	\alpha_{\text{vanLeer}}(r) &= \frac{r + |r|}{1 + |r|}
+\end{align}
+
+
+
+
+Finally, a viable option\footnote{Note that I found the minmod limiter to produce better results.} 
+is the slope and flux limiter combination described in \cite{hopkinsGIZMONewClass2015} for 
+hydrodynamics. This limiter consists of two steps: The first step consists of slope limiting the 
+individual gradients of each particle. The main idea is to make sure that if we extrapolate the 
+gradients of a particle to its neighbouring particles' positions, then the extrapolated value 
+shouldn't be higher than the highest actual particle value, nor lower than the lowest actual value. 
+The ``true'' obtained gradient $\nabla \phi^i_{true}$ calculated by use of eqn. \ref{eq:gradient} of 
+any quantity $\phi^i$ needs to be limited by
+
+\begin{align}
+	\nabla \phi_{lim}^i &= \alpha_i \nabla \phi^i_{true} \label{eq:cell-limiter-first}\\
+	\alpha_i &= \min\left[ 1, \frac{\phi_{ij\ ngb}^{max} - \phi_i}{\nabla \phi^i_{true} \cdot
+r_{max}}, \frac{\phi_i - \phi_{ij\ ngb}^{min}}{\nabla \phi^i_{true} \cdot r_{max}} \right]
+\label{eq:cell-limiter-last}
+\end{align}
+
+
+Secondly, to ensure more general stability, a pair-wise slope limiter from
+\cite{hopkinsGIZMONewClass2015} is employed during each particle interaction.
+For a general quantity $Q_k$ of particle $k$, the slope limited quantity $Q_k^{lim}$ at the
+intersection $\mathbf{x} = \mathbf{x}_{kl}$ for the interaction between this particle $k$ and some
+other particle $l$ is
+
+\begin{equation}
+	Q_k^{lim} =
+	\begin{cases}
+		Q_k
+						& \text{ if } Q_k = Q_l \\
+		\max\left\{ Q_-,
+			\min\{ \overline{Q}_{kl} + \delta_2, Q_k + \DELDX{Q_k} (\mathbf{x}_{kl} - 
+\mathbf{x}_k)\}
+		\right\}
+						& \text{ if } Q_k < Q_l \\
+		\min\left\{ Q_+,
+			\max\{ \overline{Q}_{kl} - \delta_2, Q_k + \DELDX{Q_k} (\mathbf{x}_{kl} -
+\mathbf{x}_k)\}
+		\right\}
+						& \text{ if } Q_k > Q_l
+	\end{cases}  \label{eq:face-limiter-first}
+\end{equation}
+
+
+where
+
+
+\begin{align}
+Q_- &=
+	\begin{cases}
+		Q_{min} - \delta_1
+						& \text{ if } \mathrm{sign} (Q_{min} - \delta_1) = \mathrm{sign} (Q_{min})\\
+		\frac{Q_{min}}{1 + \delta_1 / | Q_{min}|}
+						& \text{ if } \mathrm{sign} (Q_{min} - \delta_1) \neq \mathrm{sign} 
+(Q_{min}) \\
+	\end{cases}\\
 %
-%\begin{align}
-%	\nabla \phi_{lim}^i &= \alpha_i \nabla \phi^i_{true} \label{eq:cell-limiter-first}\\
-%	\alpha_i &= \min\left[ 1, \frac{\phi_{ij\ ngb}^{max} - \phi_i}{\nabla \phi^i_{true} \cdot
-%r_{max}}, \frac{\phi_i - \phi_{ij\ ngb}^{min}}{\nabla \phi^i_{true} \cdot r_{max}} \right]
-%\label{eq:cell-limiter-last}
-%\end{align}
+Q_+ &=
+	\begin{cases}
+		Q_{max} + \delta_1
+						& \text{ if } \mathrm{sign} (Q_{max} + \delta_1) = \mathrm{sign} (Q_{max}) 
+\\
+		\frac{Q_{max}}{1 + \delta_1 / | Q_{min}|}
+						& \text{ if } \mathrm{sign} (Q_{max} + \delta_1) \neq \mathrm{sign} 
+(Q_{max}) \\
+	\end{cases}\\
 %
+\overline{Q}_{kl} &=
+	Q_k + \frac{|\mathbf{x}_{kl} - \mathbf{x}_{k}|}{|\mathbf{x}_{l} - \mathbf{x}_{k}|} (Q_l -
+Q_k)\\
 %
-%Secondly, to ensure more general stability, a pair-wise slope limiter from
-%\cite{hopkinsGIZMONewClass2015} is employed during each particle interaction.
-%For a general quantity $\phi_k$ of particle $k$, the slope limited quantity $\phi_k^{lim}$ at the
-%intersection $\mathbf{x} = \mathbf{x}_{kl}$ for the interaction between this particle $k$ and some
-%other particle $l$ is
-%
-%\begin{equation}
-%	\phi_k^{lim} =
-%	\begin{cases}
-%		\phi_k
-%						& \text{ if } \phi_k = \phi_l \\
-%		\max\left\{ \phi_-,
-%			\min\{ \overline{\phi}_{kl} + \delta_2, \phi_k + \DELDX{\phi_k} (\mathbf{x}_{kl} -
-%\mathbf{x}_l)\}
-%		\right\}
-%						& \text{ if } \phi_k < \phi_l \\
-%		\min\left\{ \phi_+,
-%			\max\{ \overline{\phi}_{kl} - \delta_2, \phi_k + \DELDX{\phi_k} (\mathbf{x}_{kl} -
-%\mathbf{x}_l)\}
-%		\right\}
-%						& \text{ if } \phi_k > \phi_l
-%	\end{cases}  \label{eq:face-limiter-first}
-%\end{equation}
-%
-%
-%where
-%
-%
-%\begin{align}
-%\phi_- &=
-%	\begin{cases}
-%		\phi_{min} - \delta_1
-%						& \text{ if } \mathrm{sign} (\phi_{min} - \delta_1) = \mathrm{sign} (\phi_{min})\\
-%		\frac{\phi_{min}}{1 + \delta_1 / | \phi_{min}|}
-%						& \text{ if } \mathrm{sign} (\phi_{min} - \delta_1) \neq \mathrm{sign} (\phi_{min}) \\
-%	\end{cases}\\
-%%
-%\phi_+ &=
-%	\begin{cases}
-%		\phi_{max} + \delta_1
-%						& \text{ if } \mathrm{sign} (\phi_{max} + \delta_1) = \mathrm{sign} (\phi_{max}) \\
-%		\frac{\phi_{max}}{1 + \delta_1 / | \phi_{min}|}
-%						& \text{ if } \mathrm{sign} (\phi_{max} + \delta_1) \neq \mathrm{sign} (\phi_{max}) \\
-%	\end{cases}\\
-%%
-%\overline{\phi}_{kl} &=
-%	\phi_k + \frac{|\mathbf{x}_{kl} - \mathbf{x}_{k}|}{|\mathbf{x}_{l} - \mathbf{x}_{k}|} (\phi_l -
-%\phi_k)\\
-%%
-%\phi_{min} &= \min\{ \phi_k, \phi_l \} \\
-%\phi_{max} &= \max\{ \phi_k, \phi_l \} \\
-%\delta_1 &= \gamma_1 | \phi_k - \phi_l | \\
-%\delta_2 &= \gamma_2 | \phi_k - \phi_l |  \label{eq:face-limiter-last}
-%\end{align}
-%
-%where $\gamma_1$ and $\gamma_2$ are free parameters, the recommended choice being $\gamma_1 =
-%1/2$, $\gamma_2 = 1/4$.
-%
+Q_{min} &= \min\{ Q_k, Q_l \} \\
+Q_{max} &= \max\{ Q_k, Q_l \} \\
+\delta_1 &= \gamma_1 | Q_k - Q_l | \\
+\delta_2 &= \gamma_2 | Q_k - Q_l |  \label{eq:face-limiter-last}
+\end{align}
+
+where $\gamma_1$ and $\gamma_2$ are free parameters, the recommended choice being $\gamma_1 =
+1/2$, $\gamma_2 = 1/4$.
+
 %
 %Note to self:	We could try playing with $\gamma_1$ and $\gamma_2$ to minimize diffusion or other
 %problems. We could even make it ``adaptive'', i.e. change them depending on whether we're in the
