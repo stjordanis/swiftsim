@@ -414,7 +414,7 @@ double lightcone_map_neutrino_baseline_value(
   const double r_outer_3 = r_outer * r_outer * r_outer;
 
   /* The volume mapped into a healpix pixel */
-  const double volume = area * (r_outer_3 - r_inner_3);
+  const double volume = area * (r_outer_3 - r_inner_3) / 3.0;
 
   /* The mean comoving neutrino density at z = 0 */
   const double rho_nu_0 = c->critical_density_0 * c->Omega_nu_0;
