@@ -1381,9 +1381,23 @@ void engine_rebuild(struct engine *e, const int repartitioned,
 
 #ifdef SWIFT_DEBUG_CHECKS
 
+  /* Reset all the tasks */
+  for (int i = 0; i < e->sched.nr_tasks; ++i) {
+    e->sched.tasks[i].skip = 0;
+  }
+  for (int i = 0; i < e->sched.active_count; ++i) {
+    e->sched.tid_active[i] = -1;
+  }
+  e->sched.active_count = 0;
+  for (int i = 0; i < e->s->nr_cells; ++i) {
+    cell_clear_unskip_flags(&e->s->cells_top[i]);
+  }
+
+  /* Now run the (legacy) marktasks */
   activate_by_unskip = 0;
   engine_marktasks(e);
 
+  /* Verify that the two task activation procedures match */
   for (int i = 0; i < e->sched.nr_tasks; ++i) {
     struct task *t = &e->sched.tasks[i];
 
