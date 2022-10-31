@@ -1383,7 +1383,7 @@ void engine_rebuild(struct engine *e, const int repartitioned,
 
   /* Reset all the tasks */
   for (int i = 0; i < e->sched.nr_tasks; ++i) {
-    e->sched.tasks[i].skip = 0;
+    e->sched.tasks[i].skip = 1;
   }
   for (int i = 0; i < e->sched.active_count; ++i) {
     e->sched.tid_active[i] = -1;
