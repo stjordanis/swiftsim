@@ -58,7 +58,7 @@ struct tracers_xpart_data {
 
   /*! Averaged SFR over two different time slices */
   float averaged_SFR[2];
-  
+
   /*! Density of the gas before the last AGN feedback event
    * (physical internal units) */
   float density_before_last_AGN_feedback_event;

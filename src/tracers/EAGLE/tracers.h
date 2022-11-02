@@ -117,9 +117,11 @@ static INLINE void tracers_after_timestep(
   }
 
   if (tracers_triggers_started[0])
-    xp->tracers_data.averaged_SFR[0] += star_formation_get_SFR(p, xp) * time_step_length;
+    xp->tracers_data.averaged_SFR[0] +=
+        star_formation_get_SFR(p, xp) * time_step_length;
   if (tracers_triggers_started[1])
-    xp->tracers_data.averaged_SFR[1] += star_formation_get_SFR(p, xp) * time_step_length;
+    xp->tracers_data.averaged_SFR[1] +=
+        star_formation_get_SFR(p, xp) * time_step_length;
 }
 
 /**

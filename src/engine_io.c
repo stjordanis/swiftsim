@@ -222,9 +222,9 @@ void engine_dump_snapshot(struct engine *e) {
 
   /* Cancel any triggers that are switched on */
   for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
-    e->snapshot_recording_triggers_started[i] = 0;    
+    e->snapshot_recording_triggers_started[i] = 0;
   }
-  
+
   /* Flag that we dumped a snapshot */
   e->step_props |= engine_step_prop_snapshot;
 
@@ -971,7 +971,6 @@ void engine_compute_next_ps_time(struct engine *e) {
  */
 void engine_init_output_lists(struct engine *e, struct swift_params *params,
                               const struct output_options *output_options) {
-  
 
   /* Deal with snapshots */
   e->output_list_snapshots = NULL;
@@ -1071,29 +1070,29 @@ void engine_init_output_lists(struct engine *e, struct swift_params *params,
  * and need to trigger a recording.
  *
  * @param e The #engine.
- */ 
+ */
 void engine_io_check_snapshot_triggers(struct engine *e) {
 
   /* Time until the next snapshot */
   double time_to_next_snap;
   if (e->policy & engine_policy_cosmology) {
-    time_to_next_snap = cosmology_get_delta_time(e->cosmology, e->ti_current, e->ti_next_snapshot);
+    time_to_next_snap = cosmology_get_delta_time(e->cosmology, e->ti_current,
+                                                 e->ti_next_snapshot);
   } else {
-    time_to_next_snap = (e->ti_next_snapshot - e->ti_current) / e->time_base; 
+    time_to_next_snap = (e->ti_next_snapshot - e->ti_current) / e->time_base;
   }
 
   /* Should any not yet switched on trigger be activated? */
   for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
     if (time_to_next_snap < e->snapshot_recording_triggers[i] &&
-	!e->snapshot_recording_triggers_started[i]) {
+        !e->snapshot_recording_triggers_started[i]) {
       e->snapshot_recording_triggers_started[i] = 1;
 
       /* Be vocal about this */
       if (e->verbose)
-	message("Snapshot will be dumped in %e U_t. Recording trigger activated.",
-		e->snapshot_recording_triggers[i]);
+        message(
+            "Snapshot will be dumped in %e U_t. Recording trigger activated.",
+            e->snapshot_recording_triggers[i]);
     }
   }
 }
-
-

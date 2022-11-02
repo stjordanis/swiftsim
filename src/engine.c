@@ -2349,7 +2349,7 @@ int engine_step(struct engine *e) {
 
   /* Check for any snapshot triggers */
   engine_io_check_snapshot_triggers(e);
-  
+
   if (e->verbose)
     message("Updating general quantities took %.3f %s",
             clocks_from_ticks(getticks() - tic_updates), clocks_getunit());
@@ -3069,12 +3069,16 @@ void engine_init(
   e->min_active_bin_subcycle = 1;
   e->internal_units = internal_units;
   e->output_list_snapshots = NULL;
-  e->snapshot_recording_trigger_num =
-      parser_get_opt_param_int(params, "Snapshots:number_of_recording_triggers", 0);
+  e->snapshot_recording_trigger_num = parser_get_opt_param_int(
+      params, "Snapshots:number_of_recording_triggers", 0);
   if (e->snapshot_recording_trigger_num > max_num_snapshot_triggers)
-    error("Too many snapshot triggers. Increase the value of ` max_num_snapshot_triggers` in header");
+    error(
+        "Too many snapshot triggers. Increase the value of ` "
+        "max_num_snapshot_triggers` in header");
   if (e->snapshot_recording_trigger_num)
-    parser_get_param_double_array(params, "Snapshots:recording_triggers", e->snapshot_recording_trigger_num, e->snapshot_recording_triggers);
+    parser_get_param_double_array(params, "Snapshots:recording_triggers",
+                                  e->snapshot_recording_trigger_num,
+                                  e->snapshot_recording_triggers);
   e->a_first_snapshot =
       parser_get_opt_param_double(params, "Snapshots:scale_factor_first", 0.1);
   e->time_first_snapshot =
@@ -3719,7 +3723,7 @@ void engine_struct_restore(struct engine *e, FILE *stream) {
   e->sched.tasks_ind = NULL;
   e->sched.tid_active = NULL;
   e->sched.size = 0;
-  
+
   /* Now for the other pointers, these use their own restore functions. */
   /* Note all this memory leaks, but is used once. */
   struct space *s = (struct space *)malloc(sizeof(struct space));
