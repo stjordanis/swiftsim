@@ -346,7 +346,7 @@ struct engine {
   float snapshot_subsample_fraction[swift_type_count];
   int snapshot_recording_trigger_num;
   double snapshot_recording_triggers[max_num_snapshot_triggers];
-  int snapshot_recording_triggers_done[max_num_snapshot_triggers];
+  int snapshot_recording_triggers_started[max_num_snapshot_triggers];
   int snapshot_run_on_dump;
   int snapshot_distributed;
   int snapshot_lustre_OST_count;

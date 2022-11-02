@@ -724,6 +724,15 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
          * can move this down with the rest of the RT block. */
         integertime_t ti_rt_new_step = get_part_rt_timestep(p, xp, e);
 
+	/* Time-step length in physical units */
+	double time_step_length;
+	if (with_cosmology) {
+	  time_step_length = cosmology_get_delta_time(e->cosmology, e->ti_current,
+						      e->ti_current + ti_new_step);
+	} else {
+	  time_step_length = get_timestep(get_time_bin(ti_new_step), e->time_base);
+	}
+	
         /* Update particle */
         p->time_bin = get_time_bin(ti_new_step);
 
@@ -732,7 +741,9 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         /* Update the tracers properties */
         tracers_after_timestep(p, xp, e->internal_units, e->physical_constants,
                                with_cosmology, e->cosmology,
-                               e->hydro_properties, e->cooling_func, e->time);
+                               e->hydro_properties, e->cooling_func, e->time,
+			       time_step_length,
+			       e->snapshot_recording_triggers_started);
 
         /* Number of updated particles */
         updated++;
@@ -1528,6 +1539,16 @@ void runner_do_sync(struct runner *r, struct cell *c, int force,
         new_time_bin = min(new_time_bin, e->max_active_bin);
         ti_new_step = get_integer_timestep(new_time_bin);
 
+	/* Time-step length in physical units */
+	double time_step_length;
+	if (with_cosmology) {
+	  time_step_length = cosmology_get_delta_time(e->cosmology, e->ti_current,
+						      e->ti_current + ti_new_step);
+	} else {
+	  time_step_length = get_timestep(new_time_bin, e->time_base);
+	}
+
+	
         /* Update particle */
         p->time_bin = new_time_bin;
         if (p->gpart != NULL) p->gpart->time_bin = new_time_bin;
@@ -1535,7 +1556,9 @@ void runner_do_sync(struct runner *r, struct cell *c, int force,
         /* Update the tracers properties */
         tracers_after_timestep(p, xp, e->internal_units, e->physical_constants,
                                with_cosmology, e->cosmology,
-                               e->hydro_properties, e->cooling_func, e->time);
+                               e->hydro_properties, e->cooling_func, e->time,
+			       time_step_length,
+			       e->snapshot_recording_triggers_started);
 
 #ifdef SWIFT_HYDRO_DENSITY_CHECKS
         p->limited_part = 1;

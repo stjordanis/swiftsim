@@ -222,7 +222,7 @@ void engine_dump_snapshot(struct engine *e) {
 
   /* Cancel any triggers that are switched on */
   for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
-    e->snapshot_recording_triggers_done[i] = 0;    
+    e->snapshot_recording_triggers_started[i] = 0;    
   }
   
   /* Flag that we dumped a snapshot */
@@ -1085,8 +1085,8 @@ void engine_io_check_snapshot_triggers(struct engine *e) {
   /* Should any not yet switched on trigger be activated? */
   for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
     if (time_to_next_snap < e->snapshot_recording_triggers[i] &&
-	!e->snapshot_recording_triggers_done[i]) {
-      e->snapshot_recording_triggers_done[i] = 1;
+	!e->snapshot_recording_triggers_started[i]) {
+      e->snapshot_recording_triggers_started[i] = 1;
 
       /* Be vocal about this */
       if (e->verbose)

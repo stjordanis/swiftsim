@@ -25,7 +25,9 @@
 
 /* Local includes */
 #include "cooling.h"
+#include "engine.h"
 #include "part.h"
+#include "star_formation.h"
 #include "tracers_struct.h"
 
 /**
@@ -94,7 +96,9 @@ static INLINE void tracers_after_timestep(
     const struct part *p, struct xpart *xp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const struct hydro_props *hydro_props,
-    const struct cooling_function_data *cooling, const double time) {
+    const struct cooling_function_data *cooling, const double time,
+    const double time_step_length,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {
 
   /* Current temperature */
   const float temperature = cooling_get_temperature(phys_const, hydro_props, us,
@@ -111,6 +115,11 @@ static INLINE void tracers_after_timestep(
       xp->tracers_data.maximum_temperature_time = time;
     }
   }
+
+  if (tracers_triggers_started[0])
+    xp->tracers_data.averaged_SFR[0] += star_formation_get_SFR(p, xp) * time_step_length;
+  if (tracers_triggers_started[1])
+    xp->tracers_data.averaged_SFR[1] += star_formation_get_SFR(p, xp) * time_step_length;
 }
 
 /**
