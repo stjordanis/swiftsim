@@ -239,10 +239,20 @@ static INLINE void tracers_after_jet_feedback(
  * @param p the #part.
  * @param xp the #xpart.
  */
-static INLINE void tracers_after_snapshot(const struct part *p,
-                                          struct xpart *xp) {
+static INLINE void tracers_after_snapshot_part(const struct part *p,
+                                               struct xpart *xp) {
   xp->tracers_data.averaged_SFR[0] = 0.f;
   xp->tracers_data.averaged_SFR[1] = 0.f;
+}
+
+/**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * @param p the #spart.
+ */
+static INLINE void tracers_after_snapshot_spart(struct spart *sp) {
+  sp->tracers_data.averaged_SFR[0] = 0.f;
+  sp->tracers_data.averaged_SFR[1] = 0.f;
 }
 
 /**

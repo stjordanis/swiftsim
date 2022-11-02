@@ -159,8 +159,17 @@ static INLINE void tracers_after_black_holes_feedback(
  * @param p the #part.
  * @param xp the #xpart.
  */
-static INLINE void tracers_after_snapshot(const struct part *p,
-                                          struct xpart *xp) {}
+static INLINE void tracers_after_snapshot_part(const struct part *p,
+                                               struct xpart *xp) {}
+
+/**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * Nothing to do here.
+ *
+ * @param sp the #spart.
+ */
+static INLINE void tracers_after_snapshot_spart(struct spart *sp) {}
 
 /**
  * @brief Split the tracer content of a particle into n pieces

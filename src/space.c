@@ -2325,7 +2325,10 @@ void space_reset_task_counters(struct space *s) {
  */
 void space_after_snap_tracer(struct space *s, int verbose) {
   for (size_t i = 0; i < s->nr_parts; ++i) {
-    tracers_after_snapshot(&s->parts[i], &s->xparts[i]);
+    tracers_after_snapshot_part(&s->parts[i], &s->xparts[i]);
+  }
+  for (size_t i = 0; i < s->nr_sparts; ++i) {
+    tracers_after_snapshot_spart(&s->sparts[i]);
   }
 }
 

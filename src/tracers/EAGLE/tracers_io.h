@@ -55,6 +55,19 @@ INLINE static void convert_part_averaged_SFR(const struct engine* e,
   }
 }
 
+INLINE static void convert_spart_averaged_SFR(const struct engine* e,
+                                              const struct spart* sp,
+                                              float* ret) {
+
+  for (int i = 0; i < 2; ++i) {
+    if (e->snapshot_recording_triggers_started[i])
+      ret[i] =
+          sp->tracers_data.averaged_SFR[i] / e->snapshot_recording_triggers[i];
+    else
+      ret[i] = 0.f;
+  }
+}
+
 /**
  * @brief Specifies which particle fields to write to a dataset
  *
@@ -257,7 +270,14 @@ __attribute__((always_inline)) INLINE static int tracers_write_sparticles(
                              "-1 if a particle has never been hit by feedback");
   }
 
-  return 10;
+  list[10] = io_make_output_field_convert_spart(
+      "AveragedStarFormationRates", FLOAT, 2, UNIT_CONV_SFR, 0.f, sparts,
+      convert_spart_averaged_SFR,
+      "Star formation rates of the particles averaged over the period set by "
+      "the first two snapshot triggers when the particle was still a gas "
+      "particle.");
+
+  return 11;
 }
 
 #endif /* SWIFT_TRACERS_EAGLE_IO_H */
