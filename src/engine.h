@@ -343,6 +343,8 @@ struct engine {
   char snapshot_dump_command[PARSER_MAX_LINE_SIZE];
   int snapshot_subsample[swift_type_count];
   float snapshot_subsample_fraction[swift_type_count];
+  int snapshot_recording_trigger_num;
+  double* snapshot_recording_triggers;
   int snapshot_run_on_dump;
   int snapshot_distributed;
   int snapshot_lustre_OST_count;
