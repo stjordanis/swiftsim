@@ -234,6 +234,18 @@ static INLINE void tracers_after_jet_feedback(
 }
 
 /**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * @param p the #part.
+ * @param xp the #xpart.
+ */
+static INLINE void tracers_after_snapshot(const struct part *p,
+                                          struct xpart *xp) {
+  xp->tracers_data.averaged_SFR[0] = 0.f;
+  xp->tracers_data.averaged_SFR[1] = 0.f;
+}
+
+/**
  * @brief Split the tracer content of a particle into n pieces
  *
  * @param p The #part.

@@ -221,8 +221,11 @@ void engine_dump_snapshot(struct engine *e) {
 #endif
 
   /* Cancel any triggers that are switched on */
-  for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
-    e->snapshot_recording_triggers_started[i] = 0;
+  if (e->snapshot_recording_trigger_num) {
+    for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
+      e->snapshot_recording_triggers_started[i] = 0;
+    }
+    space_after_snap_tracer(e->s, e->verbose);
   }
 
   /* Flag that we dumped a snapshot */

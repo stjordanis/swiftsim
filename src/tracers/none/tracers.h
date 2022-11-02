@@ -152,6 +152,17 @@ static INLINE void tracers_after_black_holes_feedback(
     const float scale_factor, const double time, const double delta_energy) {}
 
 /**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * Nothing to do here.
+ *
+ * @param p the #part.
+ * @param xp the #xpart.
+ */
+static INLINE void tracers_after_snapshot(const struct part *p,
+                                          struct xpart *xp) {}
+
+/**
  * @brief Split the tracer content of a particle into n pieces
  *
  * Nothing to do here.
