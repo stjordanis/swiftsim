@@ -125,6 +125,7 @@ enum engine_step_properties {
 #define engine_tasks_per_cell_margin 1.2
 #define engine_default_stf_subdir_per_output "."
 #define engine_default_snapshot_subdir "."
+#define max_num_snapshot_triggers 4
 
 /**
  * @brief The rank of the engine as a global variable (for messages).
@@ -344,7 +345,8 @@ struct engine {
   int snapshot_subsample[swift_type_count];
   float snapshot_subsample_fraction[swift_type_count];
   int snapshot_recording_trigger_num;
-  double* snapshot_recording_triggers;
+  double snapshot_recording_triggers[max_num_snapshot_triggers];
+  int snapshot_recording_triggers_done[max_num_snapshot_triggers];
   int snapshot_run_on_dump;
   int snapshot_distributed;
   int snapshot_lustre_OST_count;
@@ -677,6 +679,7 @@ void engine_reconstruct_multipoles(struct engine *e);
 void engine_allocate_foreign_particles(struct engine *e, const int fof);
 void engine_print_stats(struct engine *e);
 void engine_io(struct engine *e);
+void engine_io_check_snapshot_triggers(struct engine *e);
 void engine_collect_end_of_step(struct engine *e, int apply);
 void engine_collect_end_of_sub_cycle(struct engine *e);
 void engine_dump_snapshot(struct engine *e);

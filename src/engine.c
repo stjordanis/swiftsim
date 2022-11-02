@@ -2347,6 +2347,9 @@ int engine_step(struct engine *e) {
     hydro_props_update(e->hydro_properties, e->gravity_properties,
                        e->cosmology);
 
+  /* Check for any snapshot triggers */
+  engine_io_check_snapshot_triggers(e);
+  
   if (e->verbose)
     message("Updating general quantities took %.3f %s",
             clocks_from_ticks(getticks() - tic_updates), clocks_getunit());
@@ -3068,9 +3071,10 @@ void engine_init(
   e->output_list_snapshots = NULL;
   e->snapshot_recording_trigger_num =
       parser_get_opt_param_int(params, "Snapshots:number_of_recording_triggers", 0);
-  if (e->snapshot_recording_trigger_num) {
-    e->snapshot_recording_triggers = (double*) malloc(e->snapshot_recording_trigger_num * sizeof(double));
-  } 
+  if (e->snapshot_recording_trigger_num > max_num_snapshot_triggers)
+    error("Too many snapshot triggers. Increase the value of ` max_num_snapshot_triggers` in header");
+  if (e->snapshot_recording_trigger_num)
+    parser_get_param_double_array(params, "Snapshots:recording_triggers", e->snapshot_recording_trigger_num, e->snapshot_recording_triggers);
   e->a_first_snapshot =
       parser_get_opt_param_double(params, "Snapshots:scale_factor_first", 0.1);
   e->time_first_snapshot =
@@ -3543,8 +3547,6 @@ void engine_clean(struct engine *e, const int fof, const int restart) {
   }
   swift_free("runners", e->runners);
   free(e->snapshot_units);
-  if (e->snapshot_recording_trigger_num)
-    free(e->snapshot_recording_triggers);
 
   output_list_clean(&e->output_list_snapshots);
   output_list_clean(&e->output_list_stats);
@@ -3651,9 +3653,6 @@ void engine_struct_dump(struct engine *e, FILE *stream) {
   e->restart_max_tasks = engine_estimate_nr_tasks(e);
   restart_write_blocks(e, sizeof(struct engine), 1, stream, "engine",
                        "engine struct");
-  if (e->snapshot_recording_trigger_num)
-    restart_write_blocks(e->snapshot_recording_triggers, sizeof(double), e->snapshot_recording_trigger_num, stream, "engine snapshot triggers"
-			 , "engine snapshot triggers");
 
   /* And all the engine pointed data, these use their own dump functions. */
   space_struct_dump(e->s, stream);
@@ -3720,14 +3719,6 @@ void engine_struct_restore(struct engine *e, FILE *stream) {
   e->sched.tasks_ind = NULL;
   e->sched.tid_active = NULL;
   e->sched.size = 0;
-
-  if (e->snapshot_recording_trigger_num) {
-    e->snapshot_recording_triggers = (double*) malloc(e->snapshot_recording_trigger_num * sizeof(double));
-    restart_read_blocks(e->snapshot_recording_triggers, sizeof(double), e->snapshot_recording_trigger_num, stream, NULL
-			, "engine snapshot triggers");
-
-  }
-
   
   /* Now for the other pointers, these use their own restore functions. */
   /* Note all this memory leaks, but is used once. */
