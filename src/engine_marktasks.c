@@ -605,12 +605,15 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
         }
 
         if (t->type == task_type_pair || t->type == task_type_sub_pair) {
-          /* Add stars_out dependencies for each cell that is part of
-           * a pair/sub_pair task as to not miss any dependencies */
-          if (ci_nodeID == nodeID)
-            scheduler_activate(s, ci->hydro.super->stars.stars_out);
-          if (cj_nodeID == nodeID)
-            scheduler_activate(s, cj->hydro.super->stars.stars_out);
+
+          if (ci_active_stars || cj_active_stars) {
+            /* Add stars_out dependencies for each cell that is part of
+             * a pair/sub_pair task as to not miss any dependencies */
+            if (ci_nodeID == nodeID)
+              scheduler_activate(s, ci->hydro.super->stars.stars_out);
+            if (cj_nodeID == nodeID)
+              scheduler_activate(s, cj->hydro.super->stars.stars_out);
+          }
         }
       }
 
@@ -1475,6 +1478,7 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
       if (cell_need_activating_stars(t->ci, e, with_star_formation,
                                      with_star_formation_sink))
         scheduler_activate(s, t);
+
     }
 
     /* Sink implicit tasks? */
