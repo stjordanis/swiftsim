@@ -1405,7 +1405,7 @@ void engine_rebuild(struct engine *e, const int repartitioned,
       error("Task %s/%s activated by unskip and not by marktask!",
             taskID_names[t->type], subtaskID_names[t->subtype]);
     if (!t->activated_by_unskip && t->activated_by_marktask)
-      error("Task %s/%s activated by unskip and not by marktask!",
+      error("Task %s/%s activated by marktask and not by unskip!",
             taskID_names[t->type], subtaskID_names[t->subtype]);
 
     t->activated_by_marktask = 0;
