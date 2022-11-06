@@ -25,6 +25,7 @@
 #include "cooling.h"
 #include "cosmology.h"
 #include "dimension.h"
+#include "engine.h"
 #include "exp10.h"
 #include "gravity.h"
 #include "kernel_hydro.h"
@@ -177,6 +178,8 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
   bp->reposition.min_potential = FLT_MAX;
   bp->reposition.potential = FLT_MAX;
   bp->accretion_rate = 0.f; /* Optionally accumulated ngb-by-ngb */
+  bp->averaged_accretion_rate[0] = 0.f;
+  bp->averaged_accretion_rate[1] = 0.f;
   bp->f_visc = FLT_MAX;
   bp->accretion_boost_factor = -FLT_MAX;
   bp->mass_at_start_of_step = bp->mass; /* bp->mass may grow in nibbling mode */
@@ -627,7 +630,8 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
     const struct phys_const* constants, const struct cosmology* cosmo,
     const struct cooling_function_data* cooling,
     const struct entropy_floor_properties* floor_props, const double time,
-    const int with_cosmology, const double dt, const integertime_t ti_begin) {
+    const int with_cosmology, const double dt, const integertime_t ti_begin,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {
 
   /* Record that the black hole has another active time step */
   bp->number_of_time_steps++;
@@ -845,6 +849,12 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
   const double accr_rate = min(Bondi_rate, f_Edd * Eddington_rate);
   bp->accretion_rate = accr_rate;
   bp->eddington_fraction = Bondi_rate / Eddington_rate;
+
+  /* Accumulate average accretion rate */
+  if (tracers_triggers_started[0])
+    bp->averaged_accretion_rate[0] += accr_rate * dt;
+  if (tracers_triggers_started[1])
+    bp->averaged_accretion_rate[1] += accr_rate * dt;
 
   /* Factor in the radiative efficiency */
   const double mass_rate = (1. - epsilon_r) * accr_rate;
