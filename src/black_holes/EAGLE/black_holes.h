@@ -624,6 +624,7 @@ black_hole_energy_reservoir_threshold(struct bpart* bp,
  * @param with_cosmology Are we running with cosmology?
  * @param dt The time-step size (in physical internal units).
  * @param ti_begin The time at which the step begun (ti_current).
+ * @param tracers_triggers_started Are we recording averaged accr. rates?
  */
 __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
     struct bpart* restrict bp, const struct black_holes_props* props,
