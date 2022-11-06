@@ -1207,8 +1207,10 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
         if (cell_need_rebuild_for_black_holes_pair(ci, cj)) *rebuild_space = 1;
         if (cell_need_rebuild_for_black_holes_pair(cj, ci)) *rebuild_space = 1;
 
-        scheduler_activate(s, ci->hydro.super->black_holes.swallow_ghost_0);
-        scheduler_activate(s, cj->hydro.super->black_holes.swallow_ghost_0);
+	if (ci->hydro.super->black_holes.count > 0 && ci_active_black_holes)
+	  scheduler_activate(s, ci->hydro.super->black_holes.swallow_ghost_1);
+	if (cj->hydro.super->black_holes.count > 0 && cj_active_black_holes)
+	  scheduler_activate(s, cj->hydro.super->black_holes.swallow_ghost_1);
 
 #ifdef WITH_MPI
         /* Activate the send/recv tasks. */
@@ -1490,9 +1492,10 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
 
     /* Black hole ghost tasks ? */
     else if (t_type == task_type_bh_density_ghost ||
-             t_type == task_type_bh_swallow_ghost1 ||
+             //t_type == task_type_bh_swallow_ghost1 ||
              t_type == task_type_bh_swallow_ghost2 ||
-             t_type == task_type_bh_swallow_ghost3) {
+             t_type == task_type_bh_swallow_ghost3
+	     ) {
       if (cell_is_active_black_holes(t->ci, e)) scheduler_activate(s, t);
     }
 
