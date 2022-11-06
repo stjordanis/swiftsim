@@ -132,6 +132,8 @@ __attribute__((always_inline)) INLINE static void black_holes_first_init_bpart(
   bp->accreted_angular_momentum[0] = 0.f;
   bp->accreted_angular_momentum[1] = 0.f;
   bp->accreted_angular_momentum[2] = 0.f;
+  bp->averaged_accretion_rate[0] = 0.f;
+  bp->averaged_accretion_rate[1] = 0.f;
   bp->last_repos_vel = 0.f;
   bp->num_ngbs_to_heat = props->num_ngbs_to_heat; /* Filler value */
   bp->dt_heat = 0.f;
@@ -178,8 +180,6 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
   bp->reposition.min_potential = FLT_MAX;
   bp->reposition.potential = FLT_MAX;
   bp->accretion_rate = 0.f; /* Optionally accumulated ngb-by-ngb */
-  bp->averaged_accretion_rate[0] = 0.f;
-  bp->averaged_accretion_rate[1] = 0.f;
   bp->f_visc = FLT_MAX;
   bp->accretion_boost_factor = -FLT_MAX;
   bp->mass_at_start_of_step = bp->mass; /* bp->mass may grow in nibbling mode */
@@ -1309,6 +1309,10 @@ INLINE static void black_holes_create_from_gas(
 
   /* Last time this BH had a high Eddington fraction */
   bp->last_high_Eddington_fraction_scale_factor = -1.f;
+
+  /* Zero the average rates */
+  bp->averaged_accretion_rate[0] = 0.f;
+  bp->averaged_accretion_rate[1] = 0.f;
 
   /* Last time of mergers */
   bp->last_minor_merger_time = -1.;

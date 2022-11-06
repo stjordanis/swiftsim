@@ -99,6 +99,9 @@ struct bpart {
   /*! Instantaneous accretion rate */
   float accretion_rate;
 
+  /*! Averaged accretion rate over two different time slices */
+  float averaged_accretion_rate[2];
+
   /*! Density of the gas surrounding the black hole. */
   float rho_gas;
 
