@@ -26,6 +26,7 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
+#include "engine.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
 
