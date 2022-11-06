@@ -1542,4 +1542,17 @@ __attribute__((always_inline)) INLINE static void black_holes_update_halo_mass(
   bp->group_mass = halo_mass;
 }
 
+/**
+ * @brief Operations to perform just after a snapshot was dumped.
+ *
+ * We zero the accumulation of average accretion rates.
+ *
+ * @param bp the #bpart.
+ */
+__attribute__((always_inline)) INLINE static void black_holes_after_snapshot(
+    struct bpart* bp) {
+  bp->averaged_accretion_rate[0] = 0.f;
+  bp->averaged_accretion_rate[1] = 0.f;
+}
+
 #endif /* SWIFT_SPIN_JET_BLACK_HOLES_H */

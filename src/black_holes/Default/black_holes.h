@@ -329,4 +329,14 @@ INLINE static void black_holes_create_from_gas(
   black_holes_init_bpart(bp);
 }
 
+/**
+ * @brief Operations to perform just after a snapshot was dumped.
+ *
+ * Nothing to do here.
+ *
+ * @param bp the #bpart.
+ */
+__attribute__((always_inline)) INLINE static void black_holes_after_snapshot(
+    struct bpart* bp) {}
+
 #endif /* SWIFT_DEFAULT_BLACK_HOLES_H */

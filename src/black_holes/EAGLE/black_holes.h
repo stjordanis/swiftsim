@@ -1328,4 +1328,17 @@ INLINE static void black_holes_create_from_gas(
   black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
 }
 
+/**
+ * @brief Operations to perform just after a snapshot was dumped.
+ *
+ * We zero the accumulation of average accretion rates.
+ *
+ * @param bp the #bpart.
+ */
+__attribute__((always_inline)) INLINE static void black_holes_after_snapshot(
+    struct bpart* bp) {
+  bp->averaged_accretion_rate[0] = 0.f;
+  bp->averaged_accretion_rate[1] = 0.f;
+}
+
 #endif /* SWIFT_EAGLE_BLACK_HOLES_H */
