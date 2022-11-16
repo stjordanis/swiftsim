@@ -579,6 +579,33 @@ void cell_drift_gpart(struct cell *c, const struct engine *e, int force,
         }
       }
 
+      /* If we have neutrinos and a zoom region we need to wrap the
+         fast moving neutrinos to ensure divNu=0 for these neutrinos. */
+      if (e->s->with_zoom_region &&
+          with_neutrinos && gp->type == swift_type_neutrino) {
+
+        /* Get some useful zoom properties. */
+        const double *zoom_edges = e->s->zoom_props->region_bounds;
+        
+        /* Did the particle leave the zoom region?  */
+        if ((gp->x[0] > zoom_edges[1]) || (gp->x[0] < zoom_edges[0]) ||  // x
+            (gp->x[1] > zoom_edges[3]) || (gp->x[1] < zoom_edges[2]) ||  // y
+            (gp->x[2] > zoom_edges[5]) || (gp->x[2] < zoom_edges[4])) {  // z
+
+          /* Get the dimension of the zoom region. */
+          const double *zoom_dim = s->zoom_props->dim;
+          
+          /* Wrap this particle around the bounds of the zoom region. */
+          for (int k = 0; k < 3; k++) {
+            if (gp->x[k] < zoom_edges[2 * k])
+              gp->x[0] += zoom_dim;
+            if (gp->x[k] > zoom_edges[(2 * k) + 1])
+              gp->x[0] -= zoom_dim;
+          }
+        }
+        
+      }
+
       /* Init gravity force fields. */
       if (gpart_is_active(gp, e)) {
         gravity_init_gpart(gp);
