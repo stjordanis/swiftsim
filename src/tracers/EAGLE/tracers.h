@@ -239,8 +239,8 @@ static INLINE void tracers_first_init_bpart(struct bpart *bp,
                                             const struct unit_system *us,
                                             const struct phys_const *phys_const,
                                             const struct cosmology *cosmo) {
-  bp->tracers_data.averaged_accretion_rate[0] = 0.f;
-  bp->tracers_data.averaged_accretion_rate[1] = 0.f;
+  for (int i = 0; i < num_snapshot_triggers_bpart; ++i)
+    bp->tracers_data.averaged_accretion_rate[i] = 0.f;
 }
 
 /**
@@ -327,8 +327,9 @@ static INLINE void tracers_after_jet_feedback(
  */
 static INLINE void tracers_after_snapshot_part(const struct part *p,
                                                struct xpart *xp) {
-  xp->tracers_data.averaged_SFR[0] = 0.f;
-  xp->tracers_data.averaged_SFR[1] = 0.f;
+
+  for (int i = 0; i < num_snapshot_triggers_part; ++i)
+    xp->tracers_data.averaged_SFR[i] = 0.f;
 }
 
 /**
@@ -337,8 +338,9 @@ static INLINE void tracers_after_snapshot_part(const struct part *p,
  * @param sp the #spart.
  */
 static INLINE void tracers_after_snapshot_spart(struct spart *sp) {
-  sp->tracers_data.averaged_SFR[0] = 0.f;
-  sp->tracers_data.averaged_SFR[1] = 0.f;
+
+  for (int i = 0; i < num_snapshot_triggers_part; ++i)
+    sp->tracers_data.averaged_SFR[i] = 0.f;
 }
 
 /**
@@ -347,8 +349,9 @@ static INLINE void tracers_after_snapshot_spart(struct spart *sp) {
  * @param bp the #bpart.
  */
 static INLINE void tracers_after_snapshot_bpart(struct bpart *bp) {
-  bp->tracers_data.averaged_accretion_rate[0] = 0.f;
-  bp->tracers_data.averaged_accretion_rate[1] = 0.f;
+
+  for (int i = 0; i < num_snapshot_triggers_bpart; ++i)
+    bp->tracers_data.averaged_accretion_rate[i] = 0.f;
 }
 
 /**
