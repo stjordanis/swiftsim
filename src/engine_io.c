@@ -42,6 +42,7 @@
 #include "serial_io.h"
 #include "single_io.h"
 
+/* Standard includes */
 #include <stdio.h>
 
 /**
@@ -1097,6 +1098,7 @@ void engine_io_check_snapshot_triggers(struct engine *e) {
   for (int i = 0; i < num_snapshot_triggers_part; ++i) {
 
     if (time_to_next_snap < e->snapshot_recording_triggers_part[i] &&
+        e->snapshot_recording_triggers_part[i] > 0. &&
         !e->snapshot_recording_triggers_started_part[i]) {
       e->snapshot_recording_triggers_started_part[i] = 1;
 
@@ -1113,6 +1115,7 @@ void engine_io_check_snapshot_triggers(struct engine *e) {
   for (int i = 0; i < num_snapshot_triggers_spart; ++i) {
 
     if (time_to_next_snap < e->snapshot_recording_triggers_spart[i] &&
+        e->snapshot_recording_triggers_spart[i] > 0. &&
         !e->snapshot_recording_triggers_started_spart[i]) {
       e->snapshot_recording_triggers_started_spart[i] = 1;
 
@@ -1129,6 +1132,7 @@ void engine_io_check_snapshot_triggers(struct engine *e) {
   for (int i = 0; i < num_snapshot_triggers_bpart; ++i) {
 
     if (time_to_next_snap < e->snapshot_recording_triggers_bpart[i] &&
+        e->snapshot_recording_triggers_bpart[i] > 0. &&
         !e->snapshot_recording_triggers_started_bpart[i]) {
       e->snapshot_recording_triggers_started_bpart[i] = 1;
 
