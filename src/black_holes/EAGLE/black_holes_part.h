@@ -98,9 +98,6 @@ struct bpart {
   /*! Instantaneous accretion rate */
   float accretion_rate;
 
-  /*! Averaged accretion rate over two different time slices */
-  float averaged_accretion_rate[2];
-
   /*! Density of the gas surrounding the black hole. */
   float rho_gas;
 
@@ -276,6 +273,9 @@ struct bpart {
 
   /*! Isotropic AGN feedback information */
   struct ray_data rays[eagle_blackhole_number_of_rays];
+
+  /*! Tracer structure */
+  struct tracers_bpart_data tracers_data;
 
 #ifdef SWIFT_DEBUG_CHECKS
 

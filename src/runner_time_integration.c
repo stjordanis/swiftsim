@@ -740,7 +740,7 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         if (p->gpart != NULL) p->gpart->time_bin = p->time_bin;
 
         /* Update the tracers properties */
-        tracers_after_timestep(
+        tracers_after_timestep_part(
             p, xp, e->internal_units, e->physical_constants, with_cosmology,
             e->cosmology, e->hydro_properties, e->cooling_func, e->time,
             time_step_length, e->snapshot_recording_triggers_started);
@@ -917,9 +917,25 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         /* Get new time-step */
         const integertime_t ti_new_step = get_spart_timestep(sp, e);
 
+        /* Time-step length in physical units */
+        double time_step_length;
+        if (with_cosmology) {
+          time_step_length = cosmology_get_delta_time(
+              e->cosmology, e->ti_current, e->ti_current + ti_new_step);
+        } else {
+          time_step_length =
+              get_timestep(get_time_bin(ti_new_step), e->time_base);
+        }
+
         /* Update particle */
         sp->time_bin = get_time_bin(ti_new_step);
         sp->gpart->time_bin = get_time_bin(ti_new_step);
+
+        /* Update the tracers properties */
+        tracers_after_timestep_spart(sp, e->internal_units,
+                                     e->physical_constants, with_cosmology,
+                                     e->cosmology, time_step_length,
+                                     e->snapshot_recording_triggers_started);
 
         /* Update feedback related counters */
         if (with_feedback) {
@@ -1045,9 +1061,25 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         /* Get new time-step */
         const integertime_t ti_new_step = get_bpart_timestep(bp, e);
 
+        /* Time-step length in physical units */
+        double time_step_length;
+        if (with_cosmology) {
+          time_step_length = cosmology_get_delta_time(
+              e->cosmology, e->ti_current, e->ti_current + ti_new_step);
+        } else {
+          time_step_length =
+              get_timestep(get_time_bin(ti_new_step), e->time_base);
+        }
+
         /* Update particle */
         bp->time_bin = get_time_bin(ti_new_step);
         bp->gpart->time_bin = get_time_bin(ti_new_step);
+
+        /* Update the tracers properties */
+        tracers_after_timestep_bpart(bp, e->internal_units,
+                                     e->physical_constants, with_cosmology,
+                                     e->cosmology, time_step_length,
+                                     e->snapshot_recording_triggers_started);
 
         /* Number of updated s-particles */
         b_updated++;
@@ -1553,7 +1585,7 @@ void runner_do_sync(struct runner *r, struct cell *c, int force,
         if (p->gpart != NULL) p->gpart->time_bin = new_time_bin;
 
         /* Update the tracers properties */
-        tracers_after_timestep(
+        tracers_after_timestep_part(
             p, xp, e->internal_units, e->physical_constants, with_cosmology,
             e->cosmology, e->hydro_properties, e->cooling_func, e->time,
             time_step_length, e->snapshot_recording_triggers_started);

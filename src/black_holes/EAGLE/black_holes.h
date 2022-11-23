@@ -132,8 +132,6 @@ __attribute__((always_inline)) INLINE static void black_holes_first_init_bpart(
   bp->accreted_angular_momentum[0] = 0.f;
   bp->accreted_angular_momentum[1] = 0.f;
   bp->accreted_angular_momentum[2] = 0.f;
-  bp->averaged_accretion_rate[0] = 0.f;
-  bp->averaged_accretion_rate[1] = 0.f;
   bp->last_repos_vel = 0.f;
   bp->num_ngbs_to_heat = props->num_ngbs_to_heat; /* Filler value */
   bp->dt_heat = 0.f;
@@ -851,12 +849,6 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
   bp->accretion_rate = accr_rate;
   bp->eddington_fraction = Bondi_rate / Eddington_rate;
 
-  /* Accumulate average accretion rate */
-  if (tracers_triggers_started[0])
-    bp->averaged_accretion_rate[0] += accr_rate * dt;
-  if (tracers_triggers_started[1])
-    bp->averaged_accretion_rate[1] += accr_rate * dt;
-
   /* Factor in the radiative efficiency */
   const double mass_rate = (1. - epsilon_r) * accr_rate;
   const double luminosity = epsilon_r * accr_rate * c * c;
@@ -1310,10 +1302,6 @@ INLINE static void black_holes_create_from_gas(
   /* Last time this BH had a high Eddington fraction */
   bp->last_high_Eddington_fraction_scale_factor = -1.f;
 
-  /* Zero the average rates */
-  bp->averaged_accretion_rate[0] = 0.f;
-  bp->averaged_accretion_rate[1] = 0.f;
-
   /* Last time of mergers */
   bp->last_minor_merger_time = -1.;
   bp->last_major_merger_time = -1.;
@@ -1326,19 +1314,6 @@ INLINE static void black_holes_create_from_gas(
   black_holes_init_bpart(bp);
 
   black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
-}
-
-/**
- * @brief Operations to perform just after a snapshot was dumped.
- *
- * We zero the accumulation of average accretion rates.
- *
- * @param bp the #bpart.
- */
-__attribute__((always_inline)) INLINE static void black_holes_after_snapshot(
-    struct bpart* bp) {
-  bp->averaged_accretion_rate[0] = 0.f;
-  bp->averaged_accretion_rate[1] = 0.f;
 }
 
 #endif /* SWIFT_EAGLE_BLACK_HOLES_H */

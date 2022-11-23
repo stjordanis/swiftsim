@@ -24,6 +24,7 @@
 #include <config.h>
 
 /* Local includes */
+#include "black_holes.h"
 #include "cooling.h"
 #include "engine.h"
 #include "part.h"
@@ -79,7 +80,7 @@ static INLINE void tracers_after_drift(
  * @brief Update the particle tracers just after its time-step has been
  * computed.
  *
- * In EAGLE we record the highest temperature reached.
+ * In EAGLE we record the highest temperature reached and the average SFR.
  *
  * @param p Pointer to the particle data.
  * @param xp Pointer to the extended particle data (containing the tracers
@@ -92,7 +93,7 @@ static INLINE void tracers_after_drift(
  * @param cooling The #cooling_function_data used in the run.
  * @param time The current time.
  */
-static INLINE void tracers_after_timestep(
+static INLINE void tracers_after_timestep_part(
     const struct part *p, struct xpart *xp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const struct hydro_props *hydro_props,
@@ -122,6 +123,55 @@ static INLINE void tracers_after_timestep(
   if (tracers_triggers_started[1])
     xp->tracers_data.averaged_SFR[1] +=
         star_formation_get_SFR(p, xp) * time_step_length;
+}
+
+/**
+ * @brief Update the star particle tracers just after its time-step has been
+ * computed.
+ *
+ * In EAGLE, nothing to do.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param with_cosmology Are we running a cosmological simulation?
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_after_timestep_spart(
+    struct spart *sp, const struct unit_system *us,
+    const struct phys_const *phys_const, const int with_cosmology,
+    const struct cosmology *cosmo, const double time_step_length,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+
+/**
+ * @brief Update the black hole particle tracers just after its time-step has
+ * been computed.
+ *
+ * In EAGLE, we record the average accr. rate.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param with_cosmology Are we running a cosmological simulation?
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_after_timestep_bpart(
+    struct bpart *bp, const struct unit_system *us,
+    const struct phys_const *phys_const, const int with_cosmology,
+    const struct cosmology *cosmo, const double time_step_length,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {
+
+  const float accr_rate = black_holes_get_accretion_rate(bp);
+
+  /* Accumulate average accretion rate */
+  if (tracers_triggers_started[0])
+    bp->tracers_data.averaged_accretion_rate[0] += accr_rate * time_step_length;
+  if (tracers_triggers_started[1])
+    bp->tracers_data.averaged_accretion_rate[1] += accr_rate * time_step_length;
 }
 
 /**
@@ -155,6 +205,41 @@ static INLINE void tracers_first_init_xpart(
 
   xp->tracers_data.last_AGN_injection_scale_factor = -1.f;
   xp->tracers_data.density_at_last_AGN_feedback_event = -1.f;
+}
+
+/**
+ * @brief Initialise the star tracer data at the start of a calculation.
+ *
+ * In EAGLE, nothing to do.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_first_init_spart(struct spart *sp,
+                                            const struct unit_system *us,
+                                            const struct phys_const *phys_const,
+                                            const struct cosmology *cosmo) {}
+
+/**
+ * @brief Initialise the black hole tracer data at the start of a calculation.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_first_init_bpart(struct bpart *bp,
+                                            const struct unit_system *us,
+                                            const struct phys_const *phys_const,
+                                            const struct cosmology *cosmo) {
+  bp->tracers_data.averaged_accretion_rate[0] = 0.f;
+  bp->tracers_data.averaged_accretion_rate[1] = 0.f;
 }
 
 /**
@@ -248,11 +333,21 @@ static INLINE void tracers_after_snapshot_part(const struct part *p,
 /**
  * @brief Tracer event called after a snapshot was written.
  *
- * @param p the #spart.
+ * @param sp the #spart.
  */
 static INLINE void tracers_after_snapshot_spart(struct spart *sp) {
   sp->tracers_data.averaged_SFR[0] = 0.f;
   sp->tracers_data.averaged_SFR[1] = 0.f;
+}
+
+/**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * @param bp the #bpart.
+ */
+static INLINE void tracers_after_snapshot_bpart(struct bpart *bp) {
+  bp->tracers_data.averaged_accretion_rate[0] = 0.f;
+  bp->tracers_data.averaged_accretion_rate[1] = 0.f;
 }
 
 /**

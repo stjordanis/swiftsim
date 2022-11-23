@@ -2332,7 +2332,7 @@ void space_after_snap_tracer(struct space *s, int verbose) {
     tracers_after_snapshot_spart(&s->sparts[i]);
   }
   for (size_t i = 0; i < s->nr_bparts; ++i) {
-    black_holes_after_snapshot(&s->bparts[i]);
+    tracers_after_snapshot_bpart(&s->bparts[i]);
   }
 }
 

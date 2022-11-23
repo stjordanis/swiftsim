@@ -155,20 +155,6 @@ INLINE static void convert_bpart_gas_temperatures(const struct engine* e,
   ret[0] = bp->internal_energy_gas * cosmo->a_factor_internal_energy /
            props->temp_to_u_factor;
 }
-
-INLINE static void convert_bpart_averaged_accretion_rate(const struct engine* e,
-                                                         const struct bpart* bp,
-                                                         float* ret) {
-
-  for (int i = 0; i < 2; ++i) {
-    if (e->snapshot_recording_triggers_started[i])
-      ret[i] =
-          bp->averaged_accretion_rate[i] / e->snapshot_recording_triggers[i];
-    else
-      ret[i] = 0.f;
-  }
-}
-
 /**
  * @brief Specifies which b-particle fields to write to a dataset
  *
@@ -183,7 +169,7 @@ INLINE static void black_holes_write_particles(const struct bpart* bparts,
                                                const int with_cosmology) {
 
   /* Say how much we want to write */
-  *num_fields = 45;
+  *num_fields = 44;
 
   /* List what we want to write */
   list[0] = io_make_output_field_convert_bpart(
@@ -472,12 +458,6 @@ INLINE static void black_holes_write_particles(const struct bpart* bparts,
   list[43] = io_make_output_field_convert_bpart(
       "Potentials", FLOAT, 1, UNIT_CONV_POTENTIAL, -1.f, bparts,
       convert_bpart_potential, "Gravitational potentials of the particles");
-
-  list[44] = io_make_output_field_convert_bpart(
-      "AveragedAccretionRates", FLOAT, 1, UNIT_CONV_MASS_PER_UNIT_TIME, 0.f,
-      bparts, convert_bpart_averaged_accretion_rate,
-      "Accretion rates of the black holes averaged over the period set by the "
-      "first two snapshot triggers");
 
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
 

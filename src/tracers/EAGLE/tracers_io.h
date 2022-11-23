@@ -68,6 +68,19 @@ INLINE static void convert_spart_averaged_SFR(const struct engine* e,
   }
 }
 
+INLINE static void convert_bpart_averaged_accretion_rate(const struct engine* e,
+                                                         const struct bpart* bp,
+                                                         float* ret) {
+
+  for (int i = 0; i < 2; ++i) {
+    if (e->snapshot_recording_triggers_started[i])
+      ret[i] = bp->tracers_data.averaged_accretion_rate[i] /
+               e->snapshot_recording_triggers[i];
+    else
+      ret[i] = 0.f;
+  }
+}
+
 /**
  * @brief Specifies which particle fields to write to a dataset
  *
@@ -278,6 +291,19 @@ __attribute__((always_inline)) INLINE static int tracers_write_sparticles(
       "particle.");
 
   return 11;
+}
+
+__attribute__((always_inline)) INLINE static int tracers_write_bparticles(
+    const struct bpart* bparts, struct io_props* list,
+    const int with_cosmology) {
+
+  list[0] = io_make_output_field_convert_bpart(
+      "AveragedAccretionRates", FLOAT, 1, UNIT_CONV_MASS_PER_UNIT_TIME, 0.f,
+      bparts, convert_bpart_averaged_accretion_rate,
+      "Accretion rates of the black holes averaged over the period set by the "
+      "first two snapshot triggers");
+
+  return 1;
 }
 
 #endif /* SWIFT_TRACERS_EAGLE_IO_H */

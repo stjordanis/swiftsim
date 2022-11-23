@@ -93,4 +93,20 @@ struct tracers_xpart_data {
   char hit_by_AGN_feedback;
 };
 
+/**
+ * @brief Properties of the tracers stored in the star particle data.
+ *
+ * Note: In this model, they are identical to the xpart data.
+ */
+#define tracers_spart_data tracers_xpart_data
+
+/**
+ * @brief Properties of the tracers stored in the black hole particle data.
+ */
+struct tracers_bpart_data {
+
+  /*! Averaged accretion rate over two different time slices */
+  float averaged_accretion_rate[2];
+};
+
 #endif /* SWIFT_TRACERS_STRUCT_EAGLE_H */
