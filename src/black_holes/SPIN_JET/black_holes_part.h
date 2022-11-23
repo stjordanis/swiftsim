@@ -99,9 +99,6 @@ struct bpart {
   /*! Instantaneous accretion rate */
   float accretion_rate;
 
-  /*! Averaged accretion rate over two different time slices */
-  float averaged_accretion_rate[2];
-
   /*! Density of the gas surrounding the black hole. */
   float rho_gas;
 
@@ -333,6 +330,9 @@ struct bpart {
   /*! Jet AGN feedback information. This ray is used to kick particles in the
       oppposite direction from the spin axis. */
   struct ray_data rays_jet_pos[spinjet_blackhole_number_of_rays];
+
+  /*! Tracer structure */
+  struct tracers_bpart_data tracers_data;
 
 #ifdef SWIFT_DEBUG_CHECKS
 
