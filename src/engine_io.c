@@ -221,10 +221,18 @@ void engine_dump_snapshot(struct engine *e) {
 #endif
 
   /* Cancel any triggers that are switched on */
-  if (e->snapshot_recording_trigger_num) {
-    for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
-      e->snapshot_recording_triggers_started[i] = 0;
-    }
+  if (num_snapshot_triggers_part || num_snapshot_triggers_spart ||
+      num_snapshot_triggers_bpart) {
+
+    /* Reset the trigger flags */
+    for (int i = 0; i < num_snapshot_triggers_part; ++i)
+      e->snapshot_recording_triggers_started_part[i] = 0;
+    for (int i = 0; i < num_snapshot_triggers_spart; ++i)
+      e->snapshot_recording_triggers_started_spart[i] = 0;
+    for (int i = 0; i < num_snapshot_triggers_bpart; ++i)
+      e->snapshot_recording_triggers_started_bpart[i] = 0;
+
+    /* Reser the tracers themselves */
     space_after_snap_tracer(e->s, e->verbose);
   }
 
@@ -1085,17 +1093,51 @@ void engine_io_check_snapshot_triggers(struct engine *e) {
     time_to_next_snap = (e->ti_next_snapshot - e->ti_current) / e->time_base;
   }
 
-  /* Should any not yet switched on trigger be activated? */
-  for (int i = 0; i < e->snapshot_recording_trigger_num; ++i) {
-    if (time_to_next_snap < e->snapshot_recording_triggers[i] &&
-        !e->snapshot_recording_triggers_started[i]) {
-      e->snapshot_recording_triggers_started[i] = 1;
+  /* Should any not yet switched on trigger be activated? (part version) */
+  for (int i = 0; i < num_snapshot_triggers_part; ++i) {
+
+    if (time_to_next_snap < e->snapshot_recording_triggers_part[i] &&
+        !e->snapshot_recording_triggers_started_part[i]) {
+      e->snapshot_recording_triggers_started_part[i] = 1;
 
       /* Be vocal about this */
       if (e->verbose)
         message(
-            "Snapshot will be dumped in %e U_t. Recording trigger activated.",
-            e->snapshot_recording_triggers[i]);
+            "Snapshot will be dumped in %e U_t. Recording trigger for part "
+            "activated.",
+            e->snapshot_recording_triggers_part[i]);
+    }
+  }
+
+  /* Should any not yet switched on trigger be activated? (spart version) */
+  for (int i = 0; i < num_snapshot_triggers_spart; ++i) {
+
+    if (time_to_next_snap < e->snapshot_recording_triggers_spart[i] &&
+        !e->snapshot_recording_triggers_started_spart[i]) {
+      e->snapshot_recording_triggers_started_spart[i] = 1;
+
+      /* Be vocal about this */
+      if (e->verbose)
+        message(
+            "Snapshot will be dumped in %e U_t. Recording trigger for spart "
+            "activated.",
+            e->snapshot_recording_triggers_spart[i]);
+    }
+  }
+
+  /* Should any not yet switched on trigger be activated? (bpart version) */
+  for (int i = 0; i < num_snapshot_triggers_bpart; ++i) {
+
+    if (time_to_next_snap < e->snapshot_recording_triggers_bpart[i] &&
+        !e->snapshot_recording_triggers_started_bpart[i]) {
+      e->snapshot_recording_triggers_started_bpart[i] = 1;
+
+      /* Be vocal about this */
+      if (e->verbose)
+        message(
+            "Snapshot will be dumped in %e U_t. Recording trigger for bpart "
+            "activated.",
+            e->snapshot_recording_triggers_bpart[i]);
     }
   }
 }

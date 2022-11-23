@@ -89,7 +89,7 @@ static INLINE void tracers_after_timestep_part(
     const struct cosmology *cosmo, const struct hydro_props *hydro_props,
     const struct cooling_function_data *cooling, const double time,
     const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+    const int tracers_triggers_started[num_snapshot_triggers_part]) {}
 
 /**
  * @brief Update the star particle tracers just after its time-step has been
@@ -109,7 +109,7 @@ static INLINE void tracers_after_timestep_spart(
     struct spart *sp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+    const int tracers_triggers_started[num_snapshot_triggers_spart]) {}
 
 /**
  * @brief Update the black hole particle tracers just after its time-step has
@@ -129,7 +129,7 @@ static INLINE void tracers_after_timestep_bpart(
     struct bpart *bp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+    const int tracers_triggers_started[num_snapshot_triggers_bpart]) {}
 
 /**
  * @brief Initialise the tracer data at the start of a calculation.

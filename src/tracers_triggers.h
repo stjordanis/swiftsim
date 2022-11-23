@@ -1,6 +1,6 @@
 /*******************************************************************************
  * This file is part of SWIFT.
- * Copyright (c) 2018 Matthieu Schaller (schaller@strw.leidenuniv.nl)
+ * Copyright (c) 2022 Matthieu Schaller (schaller@strw.leidenuniv.nl)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_TRACERS_H
-#define SWIFT_TRACERS_H
+#ifndef SWIFT_TRACERS_TRIGGERS_H
+#define SWIFT_TRACERS_TRIGGERS_H
 
 /**
- * @file src/tracers.h
+ * @file src/tracers_triggers.h
  * @brief Branches between the different particle data tracers
  */
 
@@ -29,11 +29,15 @@
 
 /* Import the right tracers definition */
 #if defined(TRACERS_NONE)
-#include "./tracers/none/tracers.h"
+#define num_snapshot_triggers_part 1
+#define num_snapshot_triggers_spart 1
+#define num_snapshot_triggers_bpart 1
 #elif defined(TRACERS_EAGLE)
-#include "./tracers/EAGLE/tracers.h"
+#define num_snapshot_triggers_part 2
+#define num_snapshot_triggers_spart 1
+#define num_snapshot_triggers_bpart 2
 #else
 #error "Invalid choice of tracers."
 #endif
 
-#endif /* SWIFT_TRACERS_H */
+#endif /* SWIFT_TRACERS_TRIGGERS_H */

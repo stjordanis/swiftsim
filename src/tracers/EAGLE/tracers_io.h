@@ -46,10 +46,10 @@ INLINE static void convert_part_averaged_SFR(const struct engine* e,
                                              const struct xpart* xp,
                                              float* ret) {
 
-  for (int i = 0; i < 2; ++i) {
-    if (e->snapshot_recording_triggers_started[i])
-      ret[i] =
-          xp->tracers_data.averaged_SFR[i] / e->snapshot_recording_triggers[i];
+  for (int i = 0; i < num_snapshot_triggers_part; ++i) {
+    if (e->snapshot_recording_triggers_started_part[i])
+      ret[i] = xp->tracers_data.averaged_SFR[i] /
+               e->snapshot_recording_triggers_part[i];
     else
       ret[i] = 0.f;
   }
@@ -59,10 +59,12 @@ INLINE static void convert_spart_averaged_SFR(const struct engine* e,
                                               const struct spart* sp,
                                               float* ret) {
 
-  for (int i = 0; i < 2; ++i) {
-    if (e->snapshot_recording_triggers_started[i])
-      ret[i] =
-          sp->tracers_data.averaged_SFR[i] / e->snapshot_recording_triggers[i];
+  /* Note: We use the 'part' trigger here as the SF would have started when the
+   * particle was still in gas form */
+  for (int i = 0; i < num_snapshot_triggers_part; ++i) {
+    if (e->snapshot_recording_triggers_started_part[i])
+      ret[i] = sp->tracers_data.averaged_SFR[i] /
+               e->snapshot_recording_triggers_part[i];
     else
       ret[i] = 0.f;
   }
@@ -72,10 +74,10 @@ INLINE static void convert_bpart_averaged_accretion_rate(const struct engine* e,
                                                          const struct bpart* bp,
                                                          float* ret) {
 
-  for (int i = 0; i < 2; ++i) {
-    if (e->snapshot_recording_triggers_started[i])
+  for (int i = 0; i < num_snapshot_triggers_bpart; ++i) {
+    if (e->snapshot_recording_triggers_started_bpart[i])
       ret[i] = bp->tracers_data.averaged_accretion_rate[i] /
-               e->snapshot_recording_triggers[i];
+               e->snapshot_recording_triggers_bpart[i];
     else
       ret[i] = 0.f;
   }

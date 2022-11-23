@@ -99,7 +99,7 @@ static INLINE void tracers_after_timestep_part(
     const struct cosmology *cosmo, const struct hydro_props *hydro_props,
     const struct cooling_function_data *cooling, const double time,
     const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {
+    const int tracers_triggers_started[num_snapshot_triggers_part]) {
 
   /* Current temperature */
   const float temperature = cooling_get_temperature(phys_const, hydro_props, us,
@@ -117,12 +117,12 @@ static INLINE void tracers_after_timestep_part(
     }
   }
 
-  if (tracers_triggers_started[0])
-    xp->tracers_data.averaged_SFR[0] +=
-        star_formation_get_SFR(p, xp) * time_step_length;
-  if (tracers_triggers_started[1])
-    xp->tracers_data.averaged_SFR[1] +=
-        star_formation_get_SFR(p, xp) * time_step_length;
+  /* Accumulate average SFR */
+  for (int i = 0; i < num_snapshot_triggers_part; ++i) {
+    if (tracers_triggers_started[i])
+      xp->tracers_data.averaged_SFR[i] +=
+          star_formation_get_SFR(p, xp) * time_step_length;
+  }
 }
 
 /**
@@ -143,7 +143,7 @@ static INLINE void tracers_after_timestep_spart(
     struct spart *sp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+    const int tracers_triggers_started[num_snapshot_triggers_spart]) {}
 
 /**
  * @brief Update the black hole particle tracers just after its time-step has
@@ -163,15 +163,16 @@ static INLINE void tracers_after_timestep_bpart(
     struct bpart *bp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const double time_step_length,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {
+    const int tracers_triggers_started[num_snapshot_triggers_bpart]) {
 
   const float accr_rate = black_holes_get_accretion_rate(bp);
 
   /* Accumulate average accretion rate */
-  if (tracers_triggers_started[0])
-    bp->tracers_data.averaged_accretion_rate[0] += accr_rate * time_step_length;
-  if (tracers_triggers_started[1])
-    bp->tracers_data.averaged_accretion_rate[1] += accr_rate * time_step_length;
+  for (int i = 0; i < num_snapshot_triggers_part; ++i) {
+    if (tracers_triggers_started[i])
+      bp->tracers_data.averaged_accretion_rate[i] +=
+          accr_rate * time_step_length;
+  }
 }
 
 /**

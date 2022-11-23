@@ -47,6 +47,7 @@
 #include "scheduler.h"
 #include "space.h"
 #include "task.h"
+#include "tracers_triggers.h"
 #include "units.h"
 #include "velociraptor_interface.h"
 
@@ -125,7 +126,6 @@ enum engine_step_properties {
 #define engine_tasks_per_cell_margin 1.2
 #define engine_default_stf_subdir_per_output "."
 #define engine_default_snapshot_subdir "."
-#define max_num_snapshot_triggers 4
 
 /**
  * @brief The rank of the engine as a global variable (for messages).
@@ -344,9 +344,6 @@ struct engine {
   char snapshot_dump_command[PARSER_MAX_LINE_SIZE];
   int snapshot_subsample[swift_type_count];
   float snapshot_subsample_fraction[swift_type_count];
-  int snapshot_recording_trigger_num;
-  double snapshot_recording_triggers[max_num_snapshot_triggers];
-  int snapshot_recording_triggers_started[max_num_snapshot_triggers];
   int snapshot_run_on_dump;
   int snapshot_distributed;
   int snapshot_lustre_OST_count;
@@ -358,6 +355,16 @@ struct engine {
   int snapshot_use_delta_from_edge;
   double snapshot_delta_from_edge;
   int snapshot_output_count;
+
+  /* Snapshot recording trigger mechanism counters */
+  double snapshot_recording_triggers_part[num_snapshot_triggers_part];
+  int snapshot_recording_triggers_started_part[num_snapshot_triggers_part];
+
+  double snapshot_recording_triggers_spart[num_snapshot_triggers_spart];
+  int snapshot_recording_triggers_started_spart[num_snapshot_triggers_spart];
+
+  double snapshot_recording_triggers_bpart[num_snapshot_triggers_bpart];
+  int snapshot_recording_triggers_started_bpart[num_snapshot_triggers_bpart];
 
   /* Metadata from the ICs */
   struct ic_info *ics_metadata;

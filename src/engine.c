@@ -3069,16 +3069,18 @@ void engine_init(
   e->min_active_bin_subcycle = 1;
   e->internal_units = internal_units;
   e->output_list_snapshots = NULL;
-  e->snapshot_recording_trigger_num = parser_get_opt_param_int(
-      params, "Snapshots:number_of_recording_triggers", 0);
-  if (e->snapshot_recording_trigger_num > max_num_snapshot_triggers)
-    error(
-        "Too many snapshot triggers. Increase the value of ` "
-        "max_num_snapshot_triggers` in header");
-  if (e->snapshot_recording_trigger_num)
-    parser_get_param_double_array(params, "Snapshots:recording_triggers",
-                                  e->snapshot_recording_trigger_num,
-                                  e->snapshot_recording_triggers);
+  if (num_snapshot_triggers_part)
+    parser_get_param_double_array(params, "Snapshots:recording_triggers_part",
+                                  num_snapshot_triggers_part,
+                                  e->snapshot_recording_triggers_part);
+  if (num_snapshot_triggers_spart)
+    parser_get_param_double_array(params, "Snapshots:recording_triggers_spart",
+                                  num_snapshot_triggers_spart,
+                                  e->snapshot_recording_triggers_spart);
+  if (num_snapshot_triggers_bpart)
+    parser_get_param_double_array(params, "Snapshots:recording_triggers_bpart",
+                                  num_snapshot_triggers_bpart,
+                                  e->snapshot_recording_triggers_bpart);
   e->a_first_snapshot =
       parser_get_opt_param_double(params, "Snapshots:scale_factor_first", 0.1);
   e->time_first_snapshot =

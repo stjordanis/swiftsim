@@ -20,6 +20,9 @@
 #ifndef SWIFT_TRACERS_STRUCT_EAGLE_H
 #define SWIFT_TRACERS_STRUCT_EAGLE_H
 
+/* Local includes */
+#include "tracers_triggers.h"
+
 /**
  * @brief Properties of the tracers stored in the extended particle data.
  */
@@ -57,7 +60,7 @@ struct tracers_xpart_data {
   };
 
   /*! Averaged SFR over two different time slices */
-  float averaged_SFR[2];
+  float averaged_SFR[num_snapshot_triggers_part];
 
   /*! Density of the gas before the last AGN feedback event
    * (physical internal units) */
@@ -106,7 +109,7 @@ struct tracers_xpart_data {
 struct tracers_bpart_data {
 
   /*! Averaged accretion rate over two different time slices */
-  float averaged_accretion_rate[2];
+  float averaged_accretion_rate[num_snapshot_triggers_bpart];
 };
 
 #endif /* SWIFT_TRACERS_STRUCT_EAGLE_H */

@@ -743,7 +743,7 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         tracers_after_timestep_part(
             p, xp, e->internal_units, e->physical_constants, with_cosmology,
             e->cosmology, e->hydro_properties, e->cooling_func, e->time,
-            time_step_length, e->snapshot_recording_triggers_started);
+            time_step_length, e->snapshot_recording_triggers_started_part);
 
         /* Number of updated particles */
         updated++;
@@ -932,10 +932,10 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         sp->gpart->time_bin = get_time_bin(ti_new_step);
 
         /* Update the tracers properties */
-        tracers_after_timestep_spart(sp, e->internal_units,
-                                     e->physical_constants, with_cosmology,
-                                     e->cosmology, time_step_length,
-                                     e->snapshot_recording_triggers_started);
+        tracers_after_timestep_spart(
+            sp, e->internal_units, e->physical_constants, with_cosmology,
+            e->cosmology, time_step_length,
+            e->snapshot_recording_triggers_started_spart);
 
         /* Update feedback related counters */
         if (with_feedback) {
@@ -1076,10 +1076,10 @@ void runner_do_timestep(struct runner *r, struct cell *c, const int timer) {
         bp->gpart->time_bin = get_time_bin(ti_new_step);
 
         /* Update the tracers properties */
-        tracers_after_timestep_bpart(bp, e->internal_units,
-                                     e->physical_constants, with_cosmology,
-                                     e->cosmology, time_step_length,
-                                     e->snapshot_recording_triggers_started);
+        tracers_after_timestep_bpart(
+            bp, e->internal_units, e->physical_constants, with_cosmology,
+            e->cosmology, time_step_length,
+            e->snapshot_recording_triggers_started_bpart);
 
         /* Number of updated s-particles */
         b_updated++;
@@ -1588,7 +1588,7 @@ void runner_do_sync(struct runner *r, struct cell *c, int force,
         tracers_after_timestep_part(
             p, xp, e->internal_units, e->physical_constants, with_cosmology,
             e->cosmology, e->hydro_properties, e->cooling_func, e->time,
-            time_step_length, e->snapshot_recording_triggers_started);
+            time_step_length, e->snapshot_recording_triggers_started_part);
 
 #ifdef SWIFT_HYDRO_DENSITY_CHECKS
         p->limited_part = 1;
