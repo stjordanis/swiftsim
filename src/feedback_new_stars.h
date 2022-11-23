@@ -1,6 +1,6 @@
 /*******************************************************************************
  * This file is part of SWIFT.
- * Copyright (c) 2018 Matthieu Schaller (schaller@strw.leidenuniv.nl)
+ * Copyright (c) 2022 Matthieu Schaller (schaller@strw.leidenuniv.nl)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -16,26 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_FEEDBACK_H
-#define SWIFT_FEEDBACK_H
+#ifndef SWIFT_FEEDBACK_NEW_STARS_H
+#define SWIFT_FEEDBACK_NEW_STARS_H
 
 /* Config parameters. */
 #include <config.h>
 
-/* Select the correct feedback model */
+/* Select the correct feedback model and switches on/off the
+ * feedback from stars born in that very step. */
 #if defined(FEEDBACK_NONE)
-#include "./feedback/none/feedback.h"
-#include "./feedback/none/feedback_iact.h"
+#define feedback_use_newborn_stars 0
 #elif defined(FEEDBACK_EAGLE_THERMAL)
-#include "./feedback/EAGLE_thermal/feedback.h"
-#include "./feedback/EAGLE_thermal/feedback_iact.h"
+#define feedback_use_newborn_stars 0
 #elif defined(FEEDBACK_EAGLE_KINETIC)
-#include "./feedback/EAGLE_kinetic/feedback.h"
-#include "./feedback/EAGLE_kinetic/feedback_iact.h"
-#define EXTRA_STAR_LOOPS
+#define feedback_use_newborn_stars 0
 #elif defined(FEEDBACK_GEAR)
-#include "./feedback/GEAR/feedback.h"
-#include "./feedback/GEAR/feedback_iact.h"
+#define feedback_use_newborn_stars 1
 #else
 #error "Invalid choice of feedback model"
 #endif
