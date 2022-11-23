@@ -28,7 +28,6 @@
 #include "cooling_properties.h"
 #include "cosmology.h"
 #include "dimension.h"
-#include "engine.h"
 #include "gravity.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
@@ -615,15 +614,13 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
  * @param with_cosmology Are we running with cosmology?
  * @param dt The time-step size (in physical internal units).
  * @param ti_begin Integer time value at the beginning of timestep
- * @param tracers_triggers_started Are we recording averaged accr. rates?
  */
 __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
     struct bpart* restrict bp, const struct black_holes_props* props,
     const struct phys_const* constants, const struct cosmology* cosmo,
     const struct cooling_function_data* cooling,
     const struct entropy_floor_properties* floor_props, const double time,
-    const int with_cosmology, const double dt, const integertime_t ti_begin,
-    const int tracers_triggers_started[max_num_snapshot_triggers]) {
+    const int with_cosmology, const double dt, const integertime_t ti_begin) {
 
   /* Record that the black hole has another active time step */
   bp->number_of_time_steps++;

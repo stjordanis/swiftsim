@@ -72,7 +72,7 @@ static INLINE void tracers_after_drift(
  * @brief Update the particle tracers just after its time-step has been
  * computed.
  *
- * Nothing to do here in the EAGLE model.
+ * Nothing to do here.
  *
  * @param us The internal system of units.
  * @param phys_const The physical constants in internal units.
@@ -83,12 +83,52 @@ static INLINE void tracers_after_drift(
  * @param xp Pointer to the extended particle data (containing the tracers
  * struct).
  */
-static INLINE void tracers_after_timestep(
+static INLINE void tracers_after_timestep_part(
     const struct part *p, struct xpart *xp, const struct unit_system *us,
     const struct phys_const *phys_const, const int with_cosmology,
     const struct cosmology *cosmo, const struct hydro_props *hydro_props,
     const struct cooling_function_data *cooling, const double time,
     const double time_step_length,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+
+/**
+ * @brief Update the star particle tracers just after its time-step has been
+ * computed.
+ *
+ * Nothing to do here.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param with_cosmology Are we running a cosmological simulation?
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_after_timestep_spart(
+    struct spart *sp, const struct unit_system *us,
+    const struct phys_const *phys_const, const int with_cosmology,
+    const struct cosmology *cosmo, const double time_step_length,
+    const int tracers_triggers_started[max_num_snapshot_triggers]) {}
+
+/**
+ * @brief Update the black hole particle tracers just after its time-step has
+ * been computed.
+ *
+ * Nothing to do here.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param with_cosmology Are we running a cosmological simulation?
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_after_timestep_bpart(
+    struct bpart *bp, const struct unit_system *us,
+    const struct phys_const *phys_const, const int with_cosmology,
+    const struct cosmology *cosmo, const double time_step_length,
     const int tracers_triggers_started[max_num_snapshot_triggers]) {}
 
 /**
@@ -108,6 +148,40 @@ static INLINE void tracers_first_init_xpart(
     const struct phys_const *phys_const, const struct cosmology *cosmo,
     const struct hydro_props *hydro_props,
     const struct cooling_function_data *cooling) {}
+
+/**
+ * @brief Initialise the star tracer data at the start of a calculation.
+ *
+ * Nothing to do here.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_first_init_spart(struct spart *sp,
+                                            const struct unit_system *us,
+                                            const struct phys_const *phys_const,
+                                            const struct cosmology *cosmo) {}
+
+/**
+ * @brief Initialise the black hole tracer data at the start of a calculation.
+ *
+ * Nothing to do here.
+ *
+ * @param p Pointer to the particle data.
+ * @param xp Pointer to the extended particle data (containing the tracers
+ * struct).
+ * @param us The internal system of units.
+ * @param phys_const The physical constants in internal units.
+ * @param cosmo The current cosmological model.
+ */
+static INLINE void tracers_first_init_bpart(struct bpart *bp,
+                                            const struct unit_system *us,
+                                            const struct phys_const *phys_const,
+                                            const struct cosmology *cosmo) {}
 
 /**
  * @brief Update the particles' tracer data after a stellar feedback
@@ -170,6 +244,15 @@ static INLINE void tracers_after_snapshot_part(const struct part *p,
  * @param sp the #spart.
  */
 static INLINE void tracers_after_snapshot_spart(struct spart *sp) {}
+
+/**
+ * @brief Tracer event called after a snapshot was written.
+ *
+ * Nothing to do here.
+ *
+ * @param sp the #spart.
+ */
+static INLINE void tracers_after_snapshot_bpart(struct bpart *bp) {}
 
 /**
  * @brief Split the tracer content of a particle into n pieces
