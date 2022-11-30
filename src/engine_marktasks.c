@@ -1551,10 +1551,7 @@ void engine_marktasks_mapper(void *map_data, int num_elements,
 
     /* Radiative transfer implicit tasks */
     else if (t->type == task_type_rt_in) {
-      if (cell_is_rt_active(t->ci, e) ||
-          cell_need_activating_stars(t->ci, e, with_star_formation,
-                                     with_star_formation_sink))
-        scheduler_activate(s, t);
+      if (cell_is_rt_active(t->ci, e)) scheduler_activate(s, t);
     }
 
     else if (t->type == task_type_rt_ghost1 || t->type == task_type_rt_ghost2 ||
