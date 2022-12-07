@@ -1081,23 +1081,17 @@ void engine_init_output_lists(struct engine *e, struct swift_params *params,
  * @brief Checks whether we passed a certain delta time before the next snapshot
  * and need to trigger a recording.
  *
- * Note that we use the integer timestep of the particles in the largest bin
- * to ensure we capture the start of the period.
- *
  * @param e The #engine.
  */
 void engine_io_check_snapshot_triggers(struct engine *e) {
 
   /* Time until the next snapshot */
   double time_to_next_snap;
-  const integertime_t ti_any_particle =
-      e->ti_current + get_integer_timestep(e->max_active_bin);
-
   if (e->policy & engine_policy_cosmology) {
-    time_to_next_snap = cosmology_get_delta_time(e->cosmology, ti_any_particle,
+    time_to_next_snap = cosmology_get_delta_time(e->cosmology, e->ti_current,
                                                  e->ti_next_snapshot);
   } else {
-    time_to_next_snap = (e->ti_next_snapshot - ti_any_particle) / e->time_base;
+    time_to_next_snap = (e->ti_next_snapshot - e->ti_current) / e->time_base;
   }
 
   /* Should any not yet switched on trigger be activated? (part version) */
