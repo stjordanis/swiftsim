@@ -26,7 +26,6 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
-#include "engine.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
 
@@ -327,15 +326,5 @@ INLINE static void black_holes_create_from_gas(
   /* First initialisation */
   black_holes_init_bpart(bp);
 }
-
-/**
- * @brief Operations to perform just after a snapshot was dumped.
- *
- * Nothing to do here.
- *
- * @param bp the #bpart.
- */
-__attribute__((always_inline)) INLINE static void black_holes_after_snapshot(
-    struct bpart* bp) {}
 
 #endif /* SWIFT_DEFAULT_BLACK_HOLES_H */
