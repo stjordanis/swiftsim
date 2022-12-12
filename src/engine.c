@@ -2277,6 +2277,7 @@ static void rt_count_statictics_mapper(void *restrict map_data, int count,
 
 void engine_dump_rt_subcycling_statistics(struct engine *e){
 
+  if (e->step % 16 != 0) return;
 #ifdef WITH_MPI
   return;
 #endif
@@ -2682,6 +2683,8 @@ int engine_step(struct engine *e) {
      want to lose the data from the tasks) */
   space_reset_ghost_histograms(e->s);
 
+  engine_dump_rt_subcycling_statistics(e);
+
   /* Start all the tasks. */
   TIMER_TIC;
   engine_launch(e, "tasks");
@@ -2775,9 +2778,6 @@ int engine_step(struct engine *e) {
   if (e->ti_end_min == e->ti_current && e->ti_end_min < max_nr_timesteps)
     error("Obtained a time-step of size 0");
 #endif
-
-  if (e->collect_group1.updated == e->total_nr_parts) 
-    engine_dump_rt_subcycling_statistics(e);
 
   /* Run the RT sub-cycling now. */
   engine_run_rt_sub_cycles(e);

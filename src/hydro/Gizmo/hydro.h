@@ -88,6 +88,9 @@ __attribute__((always_inline)) INLINE static float hydro_compute_timestep(
   if (vmax > 0.0f) {
     dt = psize / vmax;
   }
+
+  parttrace(p, "W %g %g %g %g %g", W[0], W[1], W[2], W[3], W[4]);
+  parttrace(p, "new dt %g", CFL_condition * dt);
   return CFL_condition * dt;
 }
 
@@ -205,6 +208,8 @@ __attribute__((always_inline)) INLINE static void hydro_init_part(
 
   /* reset the centroid variables used for the velocity correction in MFV */
   hydro_velocities_reset_centroids(p);
+
+  parttrace(p, "mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p));
 }
 
 /**
@@ -326,6 +331,7 @@ __attribute__((always_inline)) INLINE static void hydro_end_density(
   }
 #endif
 
+
   float W[5];
 
   W[0] = Q[0] * volume_inv;
@@ -349,6 +355,9 @@ __attribute__((always_inline)) INLINE static void hydro_end_density(
      this is why we divide by the volume, and not by the density */
   W[4] = hydro_gamma_minus_one * Q[4] * volume_inv;
 #endif
+
+parttrace(p, "Q %g %g %g %g %g", Q[0], Q[1], Q[2], Q[3], Q[4]);
+parttrace(p, "W %g %g %g %g %g", W[0], W[1], W[2], W[3], W[4]);
 
   /* sanity checks */
   gizmo_check_physical_quantities("density", "pressure", W[0], W[1], W[2], W[3],
@@ -402,6 +411,8 @@ __attribute__((always_inline)) INLINE static void hydro_part_has_no_neighbours(
 
   /* reset the centroid to disable MFV velocity corrections for this particle */
   hydro_velocities_reset_centroids(p);
+
+  parttrace(p, "OH NOOOOOOOOOOOO");
 }
 
 /**
@@ -429,6 +440,8 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_gradient(
   hydro_gradients_init(p);
 
   hydro_velocities_prepare_force(p, xp);
+
+  parttrace(p, "mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p));
 }
 
 /**
@@ -487,6 +500,7 @@ __attribute__((always_inline)) INLINE static void hydro_prepare_force(
 
   hydro_part_reset_gravity_fluxes(p);
   p->flux.dt = dt_therm;
+  parttrace(p, "mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p));
 }
 
 /**
@@ -582,6 +596,7 @@ __attribute__((always_inline)) INLINE static void hydro_predict_extra(
 
   float W[5];
   hydro_part_get_primitive_variables(p, W);
+  parttrace(p, "W %g %g %g %g %g", W[0], W[1], W[2], W[3], W[4]);
   float gradrho[3], gradvx[3], gradvy[3], gradvz[3], gradP[3];
   hydro_part_get_gradients(p, gradrho, gradvx, gradvy, gradvz, gradP);
 
@@ -619,6 +634,7 @@ __attribute__((always_inline)) INLINE static void hydro_predict_extra(
   gizmo_check_physical_quantities("density", "pressure", W[0], W[1], W[2], W[3],
                                   W[4]);
 
+  parttrace(p, "W predicted %g %g %g %g %g", W[0], W[1], W[2], W[3], W[4]);
   hydro_part_set_primitive_variables(p, W);
 }
 
@@ -696,6 +712,7 @@ __attribute__((always_inline)) INLINE static void hydro_kick_extra(
   }
 
   if (p->flux.dt > 0.0f) {
+    parttrace(p, "before update mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p)); 
     float flux[5];
     hydro_part_get_fluxes(p, flux);
 
@@ -713,6 +730,7 @@ __attribute__((always_inline)) INLINE static void hydro_kick_extra(
     p->conserved.energy += flux[4];
 #endif
 
+    parttrace(p, "after update mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p)); 
     /* reset the fluxes, so that they do not get used again in kick1 */
     hydro_part_reset_hydro_fluxes(p);
     /* invalidate the particle time step. It is considered to be inactive until
@@ -736,7 +754,7 @@ __attribute__((always_inline)) INLINE static void hydro_kick_extra(
   p->conserved.momentum[0] -= Pcorr * p->gradients.P[0];
   p->conserved.momentum[1] -= Pcorr * p->gradients.P[1];
   p->conserved.momentum[2] -= Pcorr * p->gradients.P[2];
-#ifdef GIZMO_TOTAL_ENERGY
+#ifdef GIZMO_TOTAL_ENEGY
   p->conserved.energy -= Pcorr * (p->fluid_v[0] * p->gradients.P[0] +
                                   p->fluid_v[1] * p->gradients.P[1] +
                                   p->fluid_v[2] * p->gradients.P[2]);
@@ -784,6 +802,8 @@ __attribute__((always_inline)) INLINE static void hydro_kick_extra(
 
   /* reset wcorr */
   p->geometry.wcorr = 1.0f;
+
+  parttrace(p, "after checks mass %g u=%g", p->conserved.mass, hydro_get_comoving_internal_energy(p)); 
 }
 
 /**

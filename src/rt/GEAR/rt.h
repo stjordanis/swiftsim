@@ -527,8 +527,10 @@ __attribute__((always_inline)) INLINE static void rt_tchem(
    * accessinging its properties there */
   if (p->conserved.mass <= 0.f) return;
 
+  parttrace(p, "before tchem mass %g u %g", p->conserved.mass, hydro_get_comoving_internal_energy(p));
   rt_do_thermochemistry(p, xp, rt_props, cosmo, hydro_props, phys_const, us,
                         dt, 0);
+  parttrace(p, "after tchem mass %g u %g", p->conserved.mass, hydro_get_comoving_internal_energy(p));
 }
 
 /**

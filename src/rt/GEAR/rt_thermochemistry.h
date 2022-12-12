@@ -115,6 +115,10 @@ INLINE static void rt_do_thermochemistry(
   grackle_field_data particle_grackle_data;
 
   gr_float density = hydro_get_physical_density(p, cosmo);
+  parttrace(p, "mass %g volume %g physical_density %g p->rho %g mass/volume %g", 
+            p->conserved.mass, p->geometry.volume, density, p->rho, p->conserved.mass / p->geometry.volume);
+  if (density == 0.) return;
+
   const float u_minimal = hydro_props->minimal_internal_energy;
   gr_float internal_energy =
       max(hydro_get_physical_internal_energy(p, xp, cosmo), u_minimal);
@@ -153,7 +157,8 @@ INLINE static void rt_do_thermochemistry(
   const float u_new = max(internal_energy, u_minimal);
 
   /* Re-do thermochemistry? */
-  if (fabsf(u_old - u_new) > 0.1 * u_old && depth <= 10){
+  if ((fabsf(u_old - u_new) > 0.1 * u_old) && depth < 5){
+    parttrace(p, "repeating tchem depth=%d uold=%g unew=%g ", depth, u_old, u_new);
     rt_clean_grackle_fields(&particle_grackle_data);
     rt_do_thermochemistry(p, xp, rt_props, cosmo, hydro_props, phys_const, us, 0.5 * dt, depth+1);
     rt_do_thermochemistry(p, xp, rt_props, cosmo, hydro_props, phys_const, us, 0.5 * dt, depth+1);
@@ -162,6 +167,13 @@ INLINE static void rt_do_thermochemistry(
 
   /* If we're good, update the particle data from grackle results */
   hydro_set_internal_energy(p, u_new);
+
+  parttrace(p, "depth %d uold %g X %g %g %g %g %g", depth, u_old, 
+            p->rt_data.tchem.mass_fraction_HI, 
+            p->rt_data.tchem.mass_fraction_HII, 
+            p->rt_data.tchem.mass_fraction_HeI, 
+            p->rt_data.tchem.mass_fraction_HeII, 
+            p->rt_data.tchem.mass_fraction_HeIII);
 
   /* Update mass fractions */
   const gr_float one_over_rho = 1. / density;
@@ -177,6 +189,13 @@ INLINE static void rt_do_thermochemistry(
       particle_grackle_data.HeIII_density[0] * one_over_rho;
 
   rt_check_unphysical_mass_fractions(p);
+
+  parttrace(p, "depth %d unew %g X %g %g %g %g %g", depth, u_new, 
+            p->rt_data.tchem.mass_fraction_HI, 
+            p->rt_data.tchem.mass_fraction_HII, 
+            p->rt_data.tchem.mass_fraction_HeI, 
+            p->rt_data.tchem.mass_fraction_HeII, 
+            p->rt_data.tchem.mass_fraction_HeIII);
 
   /* Update radiation fields */
   /* First get absorption rates at the start and the end of the step */
@@ -200,18 +219,34 @@ INLINE static void rt_do_thermochemistry(
 
   /* Now remove absorbed radiation */
   for (int g = 0; g < RT_NGROUPS; g++) {
+    parttrace(p, "BEFORE UPDATE group %d depth %d state %g fluxes %g %g %g", g, depth, p->rt_data.radiation[g].energy_density, 
+      p->rt_data.radiation[g].flux[0], 
+      p->rt_data.radiation[g].flux[1], 
+      p->rt_data.radiation[g].flux[2]);
+
     const float E_old = p->rt_data.radiation[g].energy_density;
     double f = dt * 0.5 * (absorption_rates[g] + absorption_rates_new[g]);
+    parttrace(p, "group %d depth %d f=%g rates=%g %g", g, depth, f, absorption_rates[g], absorption_rates[g]);
     f = min(1., f);
     f = max(0., f);
     p->rt_data.radiation[g].energy_density *= (1. - f);
     for (int i = 0; i < 3; i++) {
       p->rt_data.radiation[g].flux[i] *= (1. - f);
     }
+    parttrace(p, "AFTER UPDATE group %d depth %d state %g fluxes %g %g %g", g, depth, p->rt_data.radiation[g].energy_density, 
+      p->rt_data.radiation[g].flux[0], 
+      p->rt_data.radiation[g].flux[1], 
+      p->rt_data.radiation[g].flux[2]);
+
 
     rt_check_unphysical_state(&p->rt_data.radiation[g].energy_density,
                               p->rt_data.radiation[g].flux, E_old,
                               /*callloc=*/2);
+
+    parttrace(p, "AFTER CHECK group %d depth %d state %g fluxes %g %g %g", g, depth, p->rt_data.radiation[g].energy_density, 
+      p->rt_data.radiation[g].flux[0], 
+      p->rt_data.radiation[g].flux[1], 
+      p->rt_data.radiation[g].flux[2]);
   }
 
   /* Clean up after yourself. */
